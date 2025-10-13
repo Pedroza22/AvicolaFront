@@ -1,5 +1,6 @@
 export const API_CONFIG = {
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api",
+  // Use relative baseURL so Next.js rewrites proxy to backend and avoid CORS
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "/api",
   timeout: 30000,
   headers: {
     "Content-Type": "application/json",
@@ -115,5 +116,11 @@ export const API_ENDPOINTS = {
     growth: "/predictions/growth",
     consumption: "/predictions/consumption",
     mortality: "/predictions/mortality",
+  },
+  // Design (Diseña) master data
+  design: {
+    categories: "/categorias",
+    services: "/servicios",
+    configuration: "/configuracion",
   },
 } as const

@@ -31,9 +31,12 @@ export default function Dashboard() {
   } = useAppState()
 
   const getTabsCount = () => {
-    if (selectedRole === USER_ROLES.GALPONERO) return "grid-cols-7"
-    if (selectedRole === USER_ROLES.ADMIN_GRANJA) return "grid-cols-7"
-    return "grid-cols-6"
+    const canSeeCameras = selectedRole !== USER_ROLES.VETERINARIO && selectedRole !== USER_ROLES.GALPONERO
+    let count = 5 // dashboard, crecimiento, inventario, reportes, predicción
+    if (canSeeCameras) count += 1 // cámaras
+    if (selectedRole === USER_ROLES.GALPONERO) count += 1 // formularios
+    if (selectedRole === USER_ROLES.ADMIN_GRANJA) count += 1 // pedidos
+    return `grid-cols-${count}`
   }
 
   return (
@@ -81,7 +84,9 @@ export default function Dashboard() {
               <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
               <TabsTrigger value="crecimiento">Crecimiento</TabsTrigger>
               <TabsTrigger value="inventario">Inventario</TabsTrigger>
-              <TabsTrigger value="camaras">Cámaras</TabsTrigger>
+              {selectedRole !== USER_ROLES.VETERINARIO && selectedRole !== USER_ROLES.GALPONERO && (
+                <TabsTrigger value="camaras">Cámaras</TabsTrigger>
+              )}
               <TabsTrigger value="reportes">Reportes</TabsTrigger>
               <TabsTrigger value="prediccion">Predicción</TabsTrigger>
               {selectedRole === USER_ROLES.GALPONERO && <TabsTrigger value="formularios">Formularios</TabsTrigger>}
@@ -105,9 +110,11 @@ export default function Dashboard() {
               <div className="text-center py-8 text-muted-foreground">Sección de inventario en desarrollo</div>
             </TabsContent>
 
-            <TabsContent value="camaras" className="space-y-6">
-              <CameraLanding />
-            </TabsContent>
+            {selectedRole !== USER_ROLES.VETERINARIO && selectedRole !== USER_ROLES.GALPONERO && (
+              <TabsContent value="camaras" className="space-y-6">
+                <CameraLanding />
+              </TabsContent>
+            )}
 
             <TabsContent value="reportes" className="space-y-6">
               <ReportsSection />

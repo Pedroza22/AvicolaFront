@@ -3,6 +3,7 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { User, Shield, Stethoscope, Clipboard } from "lucide-react"
+import { USER_ROLES } from "@/lib/constants"
 
 interface RoleSelectorProps {
   selectedRole: string
@@ -12,25 +13,25 @@ interface RoleSelectorProps {
 export function RoleSelector({ selectedRole, onRoleChange }: RoleSelectorProps) {
   const roles = [
     {
-      id: "admin-empresa",
+      id: USER_ROLES.ADMIN_EMPRESA,
       name: "Administrador Empresa",
       icon: Shield,
       color: "bg-red-50 text-red-700",
     },
     {
-      id: "veterinario",
+      id: USER_ROLES.VETERINARIO,
       name: "Veterinario",
       icon: Stethoscope,
       color: "bg-blue-50 text-blue-700",
     },
     {
-      id: "admin-granja",
+      id: USER_ROLES.ADMIN_GRANJA,
       name: "Administrador Granja",
       icon: User,
       color: "bg-green-50 text-green-700",
     },
     {
-      id: "galponero",
+      id: USER_ROLES.GALPONERO,
       name: "Galponero",
       icon: Clipboard,
       color: "bg-orange-50 text-orange-700",

@@ -5,8 +5,33 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Clipboard, Save, Calendar } from "lucide-react"
+import { DailyRecordForm } from "@/components/forms/daily-record-form"
+import { useLotes } from "@/lib/hooks/use-lotes"
+import { useDailyRecords } from "@/lib/hooks/use-daily-records"
+import { useAppState } from "@/lib/hooks/use-app-state"
+import type { DailyRecord } from "@/lib/types"
 
 export function GalponeroForms() {
+  const { selectedLote, user } = useAppState()
+  const { lotes, loading } = useLotes()
+  const { createRecord } = useDailyRecords(selectedLote || lotes[0]?.id || "")
+
+  const handleSave = async (record: Partial<DailyRecord>) => {
+    const payload: Omit<DailyRecord, "id"> = {
+      fecha: record.fecha!,
+      loteId: record.loteId!,
+      diaLote: record.diaLote!,
+      numeroPollos: record.numeroPollos!,
+      pesoPromedio: record.pesoPromedio || 0,
+      consumoAlimento: record.consumoAlimento!,
+      totalBultos: record.totalBultos || 0,
+      consumoSemanal: record.consumoSemanal || 0,
+      observaciones: record.observaciones || "",
+      createdBy: user?.id || "system",
+    }
+    await createRecord(payload)
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -31,19 +56,14 @@ export function GalponeroForms() {
           <Card>
             <CardHeader>
               <CardTitle>Registro Diario</CardTitle>
-              <CardDescription>Formulario de registro en desarrollo</CardDescription>
+              <CardDescription>Registra consumo y peso diario del lote</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-2">
-                <Button>
-                  <Save className="h-4 w-4 mr-2" />
-                  Guardar Registro
-                </Button>
-                <Button variant="outline">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Ver Historial
-                </Button>
-              </div>
+              {loading ? (
+                <div className="text-sm text-muted-foreground">Cargando lotes...</div>
+              ) : (
+                <DailyRecordForm lotes={lotes} onSave={handleSave} />
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -75,3 +95,5 @@ export function GalponeroForms() {
     </div>
   )
 }
+
+export default GalponeroForms

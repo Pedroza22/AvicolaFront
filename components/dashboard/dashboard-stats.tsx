@@ -44,7 +44,7 @@ export function DashboardStats({ selectedFarm, selectedShed, selectedLote, galpo
             </div>
             <div>
               <span className="text-blue-600">Pollos Activos:</span>
-              <p className="font-bold text-lg">{liveData.pollosActivos.toLocaleString()}</p>
+              <p className="font-bold text-lg">{liveData.pollosActivos.toLocaleString("es-ES")}</p>
             </div>
             <div>
               <span className="text-blue-600">Última Actualización:</span>
@@ -61,7 +61,7 @@ export function DashboardStats({ selectedFarm, selectedShed, selectedLote, galpo
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{liveData.pollosActivos.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{liveData.pollosActivos.toLocaleString("es-ES")}</div>
             <p className="text-xs text-muted-foreground">
               <span className="text-green-600">Día {liveData.diaLote}</span> del lote
             </p>
