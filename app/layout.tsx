@@ -3,6 +3,7 @@ import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
+import AuthInit from '@/lib/components/auth-init'
 
 export const metadata: Metadata = {
   title: 'v0 App',
@@ -18,6 +19,7 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${GeistSans.className} ${GeistMono.variable}`}>
       <body>
+        <AuthInit />
         {children}
         <Analytics />
       </body>

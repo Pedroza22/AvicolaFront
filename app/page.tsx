@@ -36,7 +36,7 @@ export default function Dashboard() {
     if (canSeeCameras) count += 1 // cámaras
     if (selectedRole === USER_ROLES.GALPONERO) count += 1 // formularios
     if (selectedRole === USER_ROLES.ADMIN_GRANJA) count += 1 // pedidos
-    return `grid-cols-${count}`
+    return count
   }
 
   return (
@@ -80,7 +80,7 @@ export default function Dashboard() {
           <InventoryAlerts />
 
           <Tabs defaultValue="dashboard" className="space-y-6">
-            <TabsList className={`grid w-full ${getTabsCount()}`}>
+            <TabsList className={`grid w-full`} style={{ gridTemplateColumns: `repeat(${getTabsCount()}, minmax(0, 1fr))` }}>
               <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
               <TabsTrigger value="crecimiento">Crecimiento</TabsTrigger>
               <TabsTrigger value="inventario">Inventario</TabsTrigger>
@@ -98,7 +98,7 @@ export default function Dashboard() {
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <GrowthChart />
-                <MortalityChart />
+                <MortalityChart flockId={selectedLote} />
               </div>
             </TabsContent>
 

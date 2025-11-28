@@ -25,10 +25,13 @@ export default function LoginPage() {
     try {
       setLoading(true)
       setError(null)
-      const { token, user } = await AuthService.login(email, password)
-      // El servicio ya guarda el token en localStorage; setea estado de app
-      setUser(user)
-      setSelectedRole(user.rol)
+      const { access, refresh, user } = await AuthService.login(email, password)
+      // El servicio ya guarda los tokens en localStorage; setea estado de app
+      if (user) {
+        setUser(user)
+        // user may have role under different key, try both
+        setSelectedRole((user as any).role || (user as any).rol)
+      }
       router.push("/")
     } finally {
       setLoading(false)

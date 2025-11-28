@@ -3,11 +3,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { MapPin, Home, Calendar } from "lucide-react"
+import React from "react"
 
 interface FarmSelectorProps {
-  selectedFarm: string
-  selectedShed: string
-  selectedLote: string
+  selectedFarm?: string
+  selectedShed?: string
+  selectedLote?: string
   onFarmChange: (farm: string) => void
   onShedChange: (shed: string) => void
   onLoteChange: (lote: string) => void
@@ -21,41 +22,57 @@ export function FarmSelector({
   onShedChange,
   onLoteChange,
 }: FarmSelectorProps) {
-  const farms = [
-    { id: "granja-1", name: "Granja Norte", sheds: 8, status: "activa" },
-    { id: "granja-2", name: "Granja Sur", sheds: 6, status: "activa" },
-    { id: "granja-3", name: "Granja Este", sheds: 10, status: "mantenimiento" },
-  ]
+  const [farms, setFarms] = React.useState<Array<{ id: string; name: string }>>([])
+  const [sheds, setSheds] = React.useState<Array<{ id: string; name: string }>>([])
+  const [lotes, setLotes] = React.useState<Array<{ id: string; name: string; diasActuales?: number }>>([])
+  const [loadingFarms, setLoadingFarms] = React.useState(false)
+  const [loadingSheds, setLoadingSheds] = React.useState(false)
+  const [loadingLotes, setLoadingLotes] = React.useState(false)
 
-  const sheds = [
-    { id: "galpon-1", name: "Galpón 1", capacity: 1200, current: 1150 },
-    { id: "galpon-2", name: "Galpón 2", capacity: 1200, current: 1180 },
-    { id: "galpon-3", name: "Galpón 3", capacity: 1200, current: 1100 },
-    { id: "galpon-4", name: "Galpón 4", capacity: 1200, current: 1190 },
-  ]
+  React.useEffect(() => {
+    let mounted = true
+    setLoadingFarms(true)
+    import("@/lib/repositories/farm.repository").then((mod) => {
+      return mod.farmRepository.getAll()
+    }).then((data) => {
+      if (mounted) setFarms(data.map((f: any) => ({ id: String(f.id), name: f.name })))
+    }).catch(() => {
+      // keep fallback empty
+    }).finally(() => mounted && setLoadingFarms(false))
+    return () => { mounted = false }
+  }, [])
 
-  const lotes = [
-    {
-      id: "lote-09",
-      name: "Lote 09",
-      fechaInicio: "2023-10-16",
-      raza: "Cobb 500",
-      proveedor: "Incuves",
-      pollosIniciales: 9549,
-      diasActuales: 35,
-      status: "activo",
-    },
-    {
-      id: "lote-10",
-      name: "Lote 10",
-      fechaInicio: "2023-11-01",
-      raza: "Ross 308",
-      proveedor: "Aviagen",
-      pollosIniciales: 8750,
-      diasActuales: 20,
-      status: "activo",
-    },
-  ]
+  React.useEffect(() => {
+    if (!selectedFarm) {
+      setSheds([])
+      return
+    }
+    let mounted = true
+    setLoadingSheds(true)
+    import("@/lib/repositories/shed.repository").then((mod) => mod.shedRepository.getByFarm(selectedFarm))
+      .then((data) => {
+        if (mounted) setSheds(data.map((s: any) => ({ id: String(s.id), name: s.name })))
+      })
+      .catch(() => {})
+      .finally(() => mounted && setLoadingSheds(false))
+    return () => { mounted = false }
+  }, [selectedFarm])
+
+  React.useEffect(() => {
+    if (!selectedShed) {
+      setLotes([])
+      return
+    }
+    let mounted = true
+    setLoadingLotes(true)
+    import("@/lib/repositories/lote.repository").then((mod) => mod.loteRepository.getByShed(selectedShed))
+      .then((data) => {
+        if (mounted) setLotes(data.map((l: any) => ({ id: String(l.id), name: l.name, diasActuales: l.current_age_days ?? l.diasActuales })))
+      })
+      .catch(() => {})
+      .finally(() => mounted && setLoadingLotes(false))
+    return () => { mounted = false }
+  }, [selectedShed])
 
   const selectedLoteData = lotes.find((lote) => lote.id === selectedLote)
 
@@ -69,9 +86,9 @@ export function FarmSelector({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Select value={selectedFarm} onValueChange={onFarmChange}>
+          <Select value={selectedFarm ?? ""} onValueChange={onFarmChange}>
             <SelectTrigger>
-              <SelectValue placeholder="Seleccionar granja" />
+              <SelectValue placeholder={loadingFarms ? "Cargando..." : "Seleccionar granja"} />
             </SelectTrigger>
             <SelectContent>
               {farms.map((farm) => (
@@ -92,9 +109,9 @@ export function FarmSelector({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Select value={selectedShed} onValueChange={onShedChange}>
+          <Select value={selectedShed ?? ""} onValueChange={onShedChange}>
             <SelectTrigger>
-              <SelectValue placeholder="Seleccionar galpón" />
+              <SelectValue placeholder={loadingSheds ? "Cargando..." : "Seleccionar galpón"} />
             </SelectTrigger>
             <SelectContent>
               {sheds.map((shed) => (
@@ -115,9 +132,9 @@ export function FarmSelector({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Select value={selectedLote} onValueChange={onLoteChange}>
+          <Select value={selectedLote ?? ""} onValueChange={onLoteChange}>
             <SelectTrigger>
-              <SelectValue placeholder="Seleccionar lote" />
+              <SelectValue placeholder={loadingLotes ? "Cargando..." : "Seleccionar lote"} />
             </SelectTrigger>
             <SelectContent>
               {lotes.map((lote) => (
@@ -143,7 +160,7 @@ export function FarmSelector({
               </div>
               <div>
                 <span className="text-muted-foreground">Día:</span>
-                <p className="font-semibold">{selectedLoteData.diasActuales}</p>
+                <p className="font-semibold">{selectedLoteData.diasActuales ?? "-"}</p>
               </div>
             </div>
           </CardContent>

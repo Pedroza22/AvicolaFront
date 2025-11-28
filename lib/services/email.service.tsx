@@ -63,9 +63,19 @@ export class EmailService {
   static async sendEmail(to: string, subject: string, content: string): Promise<boolean> {
     // Aquí iría la integración con un servicio de email real
     // Por ejemplo: SendGrid, AWS SES, Resend, etc.
-    console.log("Enviando correo a:", to)
-    console.log("Asunto:", subject)
-    console.log("Contenido:", content)
+    // Only log in development to avoid leaking data in production logs
+    try {
+      if (process.env.NODE_ENV === 'development') {
+        // eslint-disable-next-line no-console
+        console.log("Enviando correo a:", to)
+        // eslint-disable-next-line no-console
+        console.log("Asunto:", subject)
+        // eslint-disable-next-line no-console
+        console.log("Contenido:", content)
+      }
+    } catch (_e) {
+      // ignore if env is not available
+    }
 
     // Simular delay de red
     await new Promise((resolve) => setTimeout(resolve, 1000))

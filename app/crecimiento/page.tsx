@@ -43,7 +43,7 @@ export default function GrowthPage() {
         </aside>
         <main className="flex-1 p-6 space-y-6">
           <GrowthChart />
-          <MortalityChart />
+00          <MortalityChart flockId={selectedLote} />
         </main>
       </div>
     </div>

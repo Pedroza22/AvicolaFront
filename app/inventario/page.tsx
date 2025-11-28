@@ -43,7 +43,7 @@ export default function InventoryPage() {
         </aside>
         <main className="flex-1 p-6 space-y-6">
           <InventoryAlerts />
-          <StockAlerts />
+          <StockAlerts alerts={[]} onCreateOrder={() => {}} />
         </main>
       </div>
     </div>

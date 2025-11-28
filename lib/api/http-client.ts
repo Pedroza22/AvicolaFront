@@ -24,9 +24,13 @@ export class HttpClient {
     this.headers = API_CONFIG.headers
   }
 
+  // single-flight refresh lock
+  private static refreshPromise: Promise<any> | null = null
+
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), this.timeout)
+    let attemptedRefresh = false
 
     try {
       // Get auth token from localStorage or cookie
@@ -45,12 +49,62 @@ export class HttpClient {
       clearTimeout(timeoutId)
 
       if (!response.ok) {
+        // If 401 and we haven't attempted refresh, try refresh and retry once
+        if (response.status === 401 && !attemptedRefresh) {
+          attemptedRefresh = true
+          try {
+            // Use single-flight refresh to avoid multiple concurrent refresh calls
+            if (!HttpClient.refreshPromise) {
+              HttpClient.refreshPromise = (async () => {
+                const { AuthService } = await import("@/lib/services/auth.service")
+                return AuthService.refresh()
+              })()
+            }
+            const refreshed = await HttpClient.refreshPromise
+            HttpClient.refreshPromise = null
+            if (refreshed?.access) {
+              // Retry original request with new token
+              const newToken = this.getAuthToken()
+              const retryResponse = await fetch(`${this.baseURL}${endpoint}`, {
+                ...options,
+                headers: {
+                  ...this.headers,
+                  ...options.headers,
+                  ...(newToken ? { Authorization: `Bearer ${newToken}` } : {}),
+                },
+                signal: controller.signal,
+              })
+              if (!retryResponse.ok) {
+                const error = await this.handleError(retryResponse)
+                throw error
+              }
+              const retryJson = await retryResponse.json()
+              if (retryJson && typeof retryJson === "object" && ("data" in retryJson || "success" in retryJson)) {
+                return retryJson as ApiResponse<T>
+              }
+              return { data: retryJson as T, success: true }
+            }
+          } catch (e) {
+            HttpClient.refreshPromise = null
+            // fallthrough to handle original response
+          }
+        }
+
         const error = await this.handleError(response)
         throw error
       }
 
-      const data = await response.json()
-      return data
+      const json = await response.json()
+
+      // Normalize responses: many DRF endpoints return the resource directly
+      // (e.g. list of farms). Frontend code expects ApiResponse<T> with
+      // { data, success }. If backend already returns that shape, pass it
+      // through. Otherwise wrap the returned JSON into our ApiResponse.
+      if (json && typeof json === "object" && ("data" in json || "success" in json)) {
+        return json as ApiResponse<T>
+      }
+
+      return { data: json as T, success: true }
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         throw new Error("Request timeout")
@@ -77,8 +131,22 @@ export class HttpClient {
 
     // Handle specific status codes
     if (response.status === 401) {
-      // Redirect to login or refresh token
-      this.handleUnauthorized()
+      // Try to refresh token once and let the caller decide; if refresh
+      // fails, clear auth and redirect to login.
+      try {
+        // dynamic import to prevent circular dependency
+        const { AuthService } = await import("@/lib/services/auth.service")
+        const refreshed = await AuthService.refresh()
+        if (refreshed?.access) {
+          // If refresh succeeded, do nothing here. The original request
+          // will be retried by the caller. We still return the error to
+          // signal the initial attempt failed; caller logic handles retry.
+        } else {
+          this.handleUnauthorized()
+        }
+      } catch (_e) {
+        this.handleUnauthorized()
+      }
     }
 
     return error
