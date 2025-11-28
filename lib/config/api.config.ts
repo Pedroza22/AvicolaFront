@@ -46,6 +46,8 @@ export const API_ENDPOINTS = {
     update: (id: string) => `/flocks/${id}/`,
     delete: (id: string) => `/flocks/${id}/`,
     active: "/flocks/active/",
+    // Per-flock stats (mortality series & aggregates)
+    stats: (id: string) => `/flocks/${id}/mortality-stats/`,
   },
   // Daily Records
   dailyRecords: {
@@ -83,8 +85,8 @@ export const API_ENDPOINTS = {
     create: "/mortality/bulk-sync/",
     update: (id: string) => `/mortality/${id}/`,
     delete: (id: string) => `/mortality/${id}/`,
-    // Stats: prefer adding a backend endpoint. For now use report/query endpoints.
-    stats: (loteId: string) => `/reports/?type=mortality&flock=${loteId}`,
+    // Stats: backend exposes a per-flock stats action at `/flocks/{id}/mortality-stats/`.
+    stats: (loteId: string) => `/flocks/${loteId}/mortality-stats/`,
   },
   // Orders
   orders: {
@@ -105,7 +107,9 @@ export const API_ENDPOINTS = {
     update: (id: string) => `/suppliers/${id}/`,
     delete: (id: string) => `/suppliers/${id}/`,
   },
-  // Cameras
+  // Cameras (verify backend support before use)
+  // If your backend exposes camera APIs, keep these; otherwise remove.
+  // Currently not present in OpenAPI dump.
   cameras: {
     list: "/cameras/",
     byShed: (shedId: string) => `/sheds/${shedId}/cameras/`,
@@ -125,6 +129,7 @@ export const API_ENDPOINTS = {
     custom: "/reports/custom/",
   },
   // Predictions
+  // TODO: Confirm predictions endpoints in backend; keep if implemented.
   predictions: {
     growth: "/predictions/growth/",
     consumption: "/predictions/consumption/",

@@ -3,23 +3,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import React from "react"
-import { httpClient } from "@/lib/api/http-client"
+import { loteRepository } from "@/lib/repositories/lote.repository"
 import { API_ENDPOINTS } from "@/lib/config/api.config"
-
-interface MortalitySeriesItem {
-  label?: string
-  date?: string
-  mortality_rate?: number
-  value?: number
-  industry_average?: number
-}
-
-interface MortalityStats {
-  series?: MortalitySeriesItem[]
-  total_deaths?: number
-  mortality_rate?: number
-  daily_average?: number
-}
+import type { MortalityStats, MortalitySeriesItem } from "@/lib/types"
 
 export function MortalityChart({ flockId, days = 7 }: { flockId?: string; days?: number }) {
   const [data, setData] = React.useState<Array<{ week: string; mortalidad: number; promedio: number }>>([])
@@ -30,9 +16,8 @@ export function MortalityChart({ flockId, days = 7 }: { flockId?: string; days?:
       setLoading(true)
       try {
         if (flockId) {
-          const resp = await httpClient.get<MortalityStats>(`/api/flocks/${flockId}/mortality-stats/?days=${days}`)
+          const payload = await loteRepository.getMortalityStats(flockId, { days })
           if (!mounted) return
-          const payload: MortalityStats = (resp && (resp as any).data) ? (resp as any).data : (resp as any)
 
           // If API returns series in a 'series' key, map it. Otherwise, build a single-point view.
           if (payload && Array.isArray(payload.series) && payload.series.length > 0) {
@@ -62,7 +47,7 @@ export function MortalityChart({ flockId, days = 7 }: { flockId?: string; days?:
         // ignore and use fallback
       }
 
-      // Fallback static data (kept for UX until backend provides proper series)
+          // Fallback static data (kept for UX until backend provides proper series)
       if (mounted) {
         setData([
           { week: 'Sem 1', mortalidad: 1.2, promedio: 1.5 },

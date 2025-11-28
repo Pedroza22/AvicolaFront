@@ -114,6 +114,26 @@ export interface MortalityRecord {
   createdBy: string
 }
 
+// Types for mortality statistics returned by the backend (`/flocks/{id}/mortality-stats/`)
+export interface MortalitySeriesItem {
+  label?: string
+  date?: string
+  mortality_rate?: number
+  value?: number
+  industry_average?: number
+}
+
+export interface MortalityStats {
+  series?: MortalitySeriesItem[]
+  total_deaths?: number
+  mortality_rate?: number
+  daily_average?: number
+  period?: {
+    start?: string
+    end?: string
+  }
+}
+
 export interface User {
   id: string
   nombre: string

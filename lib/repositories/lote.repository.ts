@@ -1,6 +1,6 @@
 import { httpClient } from "@/lib/api/http-client"
 import { API_ENDPOINTS } from "@/lib/config/api.config"
-import type { Lote } from "@/lib/types"
+import type { Lote, MortalityStats } from "@/lib/types"
 
 export class LoteRepository {
   async getAll(): Promise<Lote[]> {
@@ -35,6 +35,13 @@ export class LoteRepository {
 
   async delete(id: string): Promise<void> {
     await httpClient.delete(API_ENDPOINTS.lotes.delete(id))
+  }
+
+  async getMortalityStats(id: string, params?: { days?: number }): Promise<MortalityStats> {
+    const query = params?.days ? `?days=${params.days}` : ""
+    const response = await httpClient.get<MortalityStats>(API_ENDPOINTS.lotes.stats(id) + query)
+    // httpClient normalizes responses to { data, success } when backend doesn't
+    return response.data as MortalityStats
   }
 }
 
