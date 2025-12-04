@@ -3,16 +3,16 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { AlertTriangle, ShoppingCart, Eye } from "lucide-react"
+import { AlertTriangle, ShoppingCart, Eye, CheckCircle } from "lucide-react"
 import { STATUS_COLORS } from "@/lib/constants"
 import type { StockAlert } from "@/lib/types"
 
 interface StockAlertsProps {
-  alerts: StockAlert[]
-  onCreateOrder: (alert: StockAlert) => void
+  alerts?: StockAlert[]
+  onCreateOrder?: (alert: StockAlert) => void
 }
 
-export function StockAlerts({ alerts, onCreateOrder }: StockAlertsProps) {
+export function StockAlerts({ alerts = [], onCreateOrder }: StockAlertsProps) {
   const getUrgenciaColor = (urgencia: string) => {
     switch (urgencia) {
       case "critica":
@@ -27,6 +27,23 @@ export function StockAlerts({ alerts, onCreateOrder }: StockAlertsProps) {
   }
 
   const criticalCount = alerts.filter((a) => a.urgencia === "critica").length
+
+  // Si no hay alertas, mostrar estado vacío
+  if (alerts.length === 0) {
+    return (
+      <Card className="bg-green-50 border-green-200">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-green-800">
+            <CheckCircle className="h-5 w-5" />
+            Stock en Niveles Óptimos
+          </CardTitle>
+          <CardDescription className="text-green-600">
+            No hay productos con stock crítico en este momento
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    )
+  }
 
   return (
     <div className="space-y-4">
@@ -74,10 +91,12 @@ export function StockAlerts({ alerts, onCreateOrder }: StockAlertsProps) {
                     <Eye className="h-3 w-3 mr-1" />
                     Ver
                   </Button>
-                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => onCreateOrder(alert)}>
-                    <ShoppingCart className="h-3 w-3 mr-1" />
-                    Pedir Ahora
-                  </Button>
+                  {onCreateOrder && (
+                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={() => onCreateOrder(alert)}>
+                      <ShoppingCart className="h-3 w-3 mr-1" />
+                      Pedir Ahora
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardContent>

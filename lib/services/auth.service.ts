@@ -1,5 +1,6 @@
 import { httpClient } from "@/lib/api/http-client"
 import { API_ENDPOINTS } from "@/lib/config/api.config"
+import { secureStorage } from "@/lib/services/secure-storage.service"
 import type { User } from "@/lib/types"
 
 type LoginResponse = {
@@ -10,10 +11,9 @@ type LoginResponse = {
 
 export class AuthService {
   private static refreshTimeoutId: number | null = null
+
   static async login(identifier: string, password: string): Promise<{ access: string; refresh?: string; user?: User }> {
     // Send 'username' field to match backend TokenObtainPairView expectations.
-    // If your users sign in with email, ensure the username equals the email or
-    // update backend to accept email-based login.
     const payload = { username: identifier, password }
     const resp = await httpClient.post<LoginResponse>(API_ENDPOINTS.auth.login, payload)
     if (!resp?.success || !resp?.data) {
@@ -24,9 +24,14 @@ export class AuthService {
     const refresh = resp.data.refresh
     const userInfo = resp.data.user_info
 
-    if (typeof window !== "undefined") {
-      if (access) localStorage.setItem("auth_token", access)
-      if (refresh) localStorage.setItem("refresh_token", refresh)
+    // Usar almacenamiento seguro en lugar de localStorage
+    if (access) {
+      const tokenPayload = secureStorage.parseToken(access)
+      const expiresIn = tokenPayload?.exp ? tokenPayload.exp - Math.floor(Date.now() / 1000) : 3600
+      secureStorage.setAccessToken(access, expiresIn)
+    }
+    if (refresh) {
+      secureStorage.setRefreshToken(refresh)
     }
 
     // schedule refresh
@@ -41,13 +46,13 @@ export class AuthService {
     } catch (_) {
       // ignore network errors on logout
     }
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("auth_token")
-      localStorage.removeItem("refresh_token")
-      if (this.refreshTimeoutId) {
-        window.clearTimeout(this.refreshTimeoutId)
-        this.refreshTimeoutId = null
-      }
+    
+    // Limpiar almacenamiento seguro
+    secureStorage.clearAll()
+    
+    if (typeof window !== "undefined" && this.refreshTimeoutId) {
+      window.clearTimeout(this.refreshTimeoutId)
+      this.refreshTimeoutId = null
     }
   }
 
@@ -60,38 +65,68 @@ export class AuthService {
   }
 
   static async refresh(): Promise<{ access?: string; refresh?: string } | null> {
-    // Attempt to refresh access token using refresh token in localStorage
     if (typeof window === "undefined") return null
-    const refreshToken = localStorage.getItem("refresh_token")
+    
+    const refreshToken = secureStorage.getRefreshToken()
     if (!refreshToken) return null
 
     try {
-      const resp = await httpClient.post<{ access: string; refresh?: string }>(API_ENDPOINTS.auth.refresh, { refresh: refreshToken })
-        if (resp?.success && resp?.data) {
+      const resp = await httpClient.post<{ access: string; refresh?: string }>(
+        API_ENDPOINTS.auth.refresh,
+        { refresh: refreshToken }
+      )
+      
+      if (resp?.success && resp?.data) {
         const { access, refresh } = resp.data
-        if (access) localStorage.setItem("auth_token", access)
-        if (refresh) localStorage.setItem("refresh_token", refresh)
-          if (access) this.scheduleRefresh(access)
+        
+        if (access) {
+          const tokenPayload = secureStorage.parseToken(access)
+          const expiresIn = tokenPayload?.exp ? tokenPayload.exp - Math.floor(Date.now() / 1000) : 3600
+          secureStorage.setAccessToken(access, expiresIn)
+          this.scheduleRefresh(access)
+        }
+        if (refresh) {
+          secureStorage.setRefreshToken(refresh)
+        }
+        
         return { access, refresh }
       }
     } catch (_) {
       // refresh failed
     }
+    
     // clear tokens on failure
-    localStorage.removeItem("auth_token")
-    localStorage.removeItem("refresh_token")
+    secureStorage.clearAll()
     return null
   }
 
   static async initialize(setUser: (u: User | null) => void): Promise<void> {
-    // If there's an access token, try to load the user and schedule refresh
     if (typeof window === "undefined") return
-    const token = localStorage.getItem("auth_token")
-    if (!token) return
+    
+    const token = secureStorage.getAccessToken()
+    if (!token) {
+      // Intentar con refresh token si existe
+      const refreshToken = secureStorage.getRefreshToken()
+      if (refreshToken) {
+        const refreshed = await this.refresh()
+        if (refreshed?.access) {
+          try {
+            const user = await this.me()
+            setUser(user)
+            return
+          } catch (_) {
+            setUser(null)
+            return
+          }
+        }
+      }
+      setUser(null)
+      return
+    }
+    
     try {
       const user = await this.me()
       setUser(user)
-      // schedule refresh if we have a token
       this.scheduleRefresh(token)
     } catch (e) {
       // Try refresh once
@@ -110,25 +145,24 @@ export class AuthService {
   }
 
   private static scheduleRefresh(accessToken: string): void {
-    // Clear existing
     if (typeof window === "undefined") return
+    
     if (this.refreshTimeoutId) {
       window.clearTimeout(this.refreshTimeoutId)
       this.refreshTimeoutId = null
     }
 
     try {
-      const parts = accessToken.split(".")
-      if (parts.length !== 3) return
-      const payloadJson = atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"))
-      const payload = JSON.parse(payloadJson)
-      const exp = payload.exp as number | undefined
+      const payload = secureStorage.parseToken(accessToken)
+      const exp = payload?.exp as number | undefined
       if (!exp) return
+      
       const expiresMs = exp * 1000
       const now = Date.now()
       // schedule refresh 60 seconds before expiry, but at least 5s from now
       const refreshAt = Math.max(now + 1000 * 5, expiresMs - 60 * 1000)
       const delay = Math.max(5000, refreshAt - now)
+      
       this.refreshTimeoutId = window.setTimeout(async () => {
         await this.refresh()
       }, delay) as unknown as number
@@ -137,4 +171,17 @@ export class AuthService {
     }
   }
 
+  /**
+   * Verifica si hay una sesión activa
+   */
+  static hasActiveSession(): boolean {
+    return secureStorage.hasActiveSession()
+  }
+
+  /**
+   * Obtiene el tiempo restante del token en segundos
+   */
+  static getTokenTimeRemaining(): number {
+    return secureStorage.getTokenTimeRemaining()
+  }
 }

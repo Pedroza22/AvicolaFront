@@ -96,10 +96,11 @@ print(f"Seeding from {start_date.date()} for {args.days} days")
 
 # Helper creators (idempotent by name)
 
-def get_or_create_farm(name: str):
+def get_or_create_farm(name: str, farm_manager):
     global farms_created
     farm, created = Farm.objects.get_or_create(name=name, defaults={
         'location': 'Desconocida',
+        'farm_manager': farm_manager,
     })
     if created:
         farms_created += 1
@@ -110,17 +111,22 @@ def create_flc_name(farm, shed_index, flock_index):
     return f"{farm.name}-G{shed_index+1}-L{flock_index+1}"
 
 
-def get_or_create_flock(name: str, shed=None, farm=None):
-    defaults = {
-        'breed': 'Ross',
-        'start_date': start_date.date(),
-        'initial_birds': 1000,
-    }
+def get_or_create_flock(shed, arrival_date, breed='Ross'):
+    """Create or get a flock by shed and arrival_date combination"""
     global flocks_created
-    flock, created = Flock.objects.get_or_create(name=name, defaults=defaults)
-    if shed and flock.shed_id != shed.id:
-        flock.shed = shed
-        flock.save()
+    defaults = {
+        'initial_quantity': 1000,
+        'current_quantity': 1000,
+        'initial_weight': 40.0,
+        'breed': breed,
+        'gender': 'X',
+        'supplier': 'DemoSupplier',
+    }
+    flock, created = Flock.objects.get_or_create(
+        shed=shed,
+        arrival_date=arrival_date,
+        defaults=defaults
+    )
     if created:
         flocks_created += 1
     return flock
@@ -138,17 +144,14 @@ for cname, ccat in mortality_causes:
 # Populate
 for f_idx in range(args.farms):
     farm_name = f"FincaDemo{f_idx+1}"
-    farm = get_or_create_farm(farm_name)
-    print(f"Using farm: {farm.name}")
-
-    # Create a farm manager user and assign to farm
-    fm_username = f"mgr_{farm.name}"
+    
+    # Create a farm manager user FIRST
+    fm_username = f"mgr_{farm_name}"
     fm_user = create_user(fm_username, identification=f"ID{f_idx+1:03d}", email=f"{fm_username}@example.com", role_name='Administrador de Granja')
-    try:
-        farm.farm_manager = fm_user
-        farm.save()
-    except Exception:
-        pass
+    
+    # Now create farm with the manager
+    farm = get_or_create_farm(farm_name, farm_manager=fm_user)
+    print(f"Using farm: {farm.name}")
 
     # Create sheds (use simple sequential naming)
     for s_idx in range(args.sheds_per_farm):
@@ -167,21 +170,11 @@ for f_idx in range(args.farms):
             pass
 
         for l_idx in range(args.flocks_per_shed):
-            flock_name = create_flc_name(farm, s_idx, l_idx)
-            # Create flock with fields matching model schema
-            flock_defaults = {
-                'arrival_date': start_date.date(),
-                'initial_quantity': 1000,
-                'current_quantity': 1000,
-                'initial_weight': 40.0,
-                'breed': 'Ross',
-                'gender': 'X',
-                'supplier': 'DemoSupplier',
-                'shed': shed,
-            }
-            flock, f_created = Flock.objects.get_or_create(name=flock_name, defaults=flock_defaults)
-            if f_created:
-                flocks_created += 1
+            # Each flock arrives at a different date (offset by l_idx * 30 days)
+            flock_arrival = start_date.date() + timedelta(days=l_idx * 30)
+            
+            # Create flock using shed + arrival_date as unique identifier
+            flock = get_or_create_flock(shed=shed, arrival_date=flock_arrival, breed='Ross')
 
             # For each flock generate daily weights and mortality
             current_birds = flock.current_quantity or flock.initial_quantity or 1000

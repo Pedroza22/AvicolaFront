@@ -1,11 +1,46 @@
+/**
+ * API Configuration
+ * 
+ * IMPORTANTE: Para producción, configura las variables de entorno:
+ * - NEXT_PUBLIC_API_URL: URL completa del backend (ej: https://api.tudominio.com/api)
+ * 
+ * En desarrollo, usa un archivo .env.local:
+ * NEXT_PUBLIC_API_URL=http://localhost:8000/api
+ */
+
+const getBaseURL = (): string => {
+  // 1. Prioridad: Variable de entorno explícita
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL
+  }
+
+  // 2. En el servidor (SSR), usar URL relativa
+  if (typeof window === "undefined") {
+    return "/api"
+  }
+
+  // 3. En desarrollo del cliente, intentar localhost
+  if (process.env.NODE_ENV === "development") {
+    return "http://127.0.0.1:8000/api"
+  }
+
+  // 4. En producción sin variable configurada, usar ruta relativa
+  // (asume que el frontend y backend están en el mismo dominio o hay un proxy)
+  return "/api"
+}
+
 export const API_CONFIG = {
-  // In development prefer direct backend URL to avoid Next proxy redirect issues.
-  // In production or when NEXT_PUBLIC_API_URL is set, use that value.
-  baseURL:
-    process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "development" ? "http://127.0.0.1:8000/api" : "/api"),
+  baseURL: getBaseURL(),
   timeout: 30000,
   headers: {
     "Content-Type": "application/json",
+    "Accept": "application/json",
+  },
+  // Configuración de retry
+  retry: {
+    maxRetries: 3,
+    baseDelay: 1000,
+    maxDelay: 10000,
   },
 }
 

@@ -2,7 +2,6 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Bell, Settings } from "lucide-react"
 import { DashboardStats } from "@/components/dashboard/dashboard-stats"
 import { GrowthChart } from "@/components/charts/growth-chart"
@@ -15,6 +14,7 @@ import { RoleSelector } from "@/components/shared/role-selector"
 import { CameraLanding } from "@/components/cameras/camera-landing"
 import { GalponeroForms } from "@/components/forms/galponero-forms"
 import { PedidosSistema } from "@/components/orders/pedidos-sistema"
+import { ConnectionStatus } from "@/components/shared/connection-status"
 import { useAppState } from "@/lib/hooks/use-app-state"
 import { USER_ROLES } from "@/lib/constants"
 
@@ -46,9 +46,7 @@ export default function Dashboard() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <h1 className="text-2xl font-bold text-gray-900">Sistema de Control Avícola</h1>
-            <Badge variant="outline" className="bg-green-50 text-green-700">
-              En línea
-            </Badge>
+            <ConnectionStatus />
           </div>
           <div className="flex items-center space-x-4">
             <RoleSelector selectedRole={selectedRole} onRoleChange={setSelectedRole} />
