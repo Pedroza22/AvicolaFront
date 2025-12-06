@@ -13,9 +13,9 @@ interface AppStore extends AppState {
 export const useAppState = create<AppStore>()(
   persist(
     (set) => ({
-      selectedFarm: "granja-1",
-      selectedShed: "galpon-1",
-      selectedLote: "lote-09",
+      selectedFarm: undefined,
+      selectedShed: undefined,
+      selectedLote: undefined,
       selectedRole: "admin-empresa",
       user: null,
 
@@ -26,7 +26,7 @@ export const useAppState = create<AppStore>()(
       setUser: (user) => set({ user }),
     }),
     {
-      name: "app-state",
+      name: "app-state-v2",
     },
   ),
 )

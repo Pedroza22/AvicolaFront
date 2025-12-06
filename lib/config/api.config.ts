@@ -103,7 +103,8 @@ export const API_ENDPOINTS = {
     create: "/inventory/",
     update: (id: string) => `/inventory/${id}/`,
     delete: (id: string) => `/inventory/${id}/`,
-    alerts: (farmId: string) => `/farms/${farmId}/inventory/alerts/`,
+    // Backend endpoint: GET /inventory/stock-alerts/ (returns alerts categorized by status)
+    alerts: "/inventory/stock-alerts/",
     updateStock: (id: string) => `/inventory/${id}/stock/`,
   },
   // Mortality
@@ -126,13 +127,13 @@ export const API_ENDPOINTS = {
   // Orders
   orders: {
     list: "/orders/",
-    byFarm: (farmId: string) => `/farms/${farmId}/orders/`,
+    byFarm: (farmId: string) => `/orders/?farm=${farmId}`,
     detail: (id: string) => `/orders/${id}/`,
     create: "/orders/",
     update: (id: string) => `/orders/${id}/`,
     delete: (id: string) => `/orders/${id}/`,
     send: (id: string) => `/orders/${id}/send/`,
-    updateStatus: (id: string) => `/orders/${id}/status/`,
+    updateStatus: (id: string) => `/orders/${id}/update-status/`,
   },
   // Suppliers
   suppliers: {
@@ -142,34 +143,21 @@ export const API_ENDPOINTS = {
     update: (id: string) => `/suppliers/${id}/`,
     delete: (id: string) => `/suppliers/${id}/`,
   },
-  // Cameras (verify backend support before use)
-  // If your backend exposes camera APIs, keep these; otherwise remove.
-  // Currently not present in OpenAPI dump.
-  cameras: {
-    list: "/cameras/",
-    byShed: (shedId: string) => `/sheds/${shedId}/cameras/`,
-    detail: (id: string) => `/cameras/${id}/`,
-    create: "/cameras/",
-    update: (id: string) => `/cameras/${id}/`,
-    delete: (id: string) => `/cameras/${id}/`,
-    stream: (id: string) => `/cameras/${id}/stream/`,
-    recording: (id: string) => `/cameras/${id}/recording/`,
-  },
   // Reports
   reports: {
-    growth: "/reports/growth/",
-    mortality: "/reports/mortality/",
-    inventory: "/reports/inventory/",
-    production: "/reports/production/",
+    growth: "/reports/growth-report/",
+    mortality: "/reports/mortality-report/",
+    inventory: "/reports/inventory-report/",
+    production: "/reports/production-report/",
     custom: "/reports/custom/",
   },
-  // Predictions
-  // TODO: Confirm predictions endpoints in backend; keep if implemented.
-  predictions: {
-    growth: "/predictions/growth/",
-    consumption: "/predictions/consumption/",
-    mortality: "/predictions/mortality/",
-  },
+  // Predictions - NOT IMPLEMENTED IN BACKEND
+  // TODO: Implement predictions endpoints in backend if needed
+  // predictions: {
+  //   growth: "/predictions/growth/",
+  //   consumption: "/predictions/consumption/",
+  //   mortality: "/predictions/mortality/",
+  // },
   // Design (Diseña) master data
   design: {
     categories: "/categorias/",

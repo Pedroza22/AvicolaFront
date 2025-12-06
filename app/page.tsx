@@ -2,7 +2,7 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { Bell, Settings } from "lucide-react"
+import { Settings } from "lucide-react"
 import { DashboardStats } from "@/components/dashboard/dashboard-stats"
 import { GrowthChart } from "@/components/charts/growth-chart"
 import { MortalityChart } from "@/components/charts/mortality-chart"
@@ -11,10 +11,11 @@ import { InventoryAlerts } from "@/components/inventory/inventory-alerts"
 import { ReportsSection } from "@/components/reports/reports-section"
 import { PredictionForm } from "@/components/forms/prediction-form"
 import { RoleSelector } from "@/components/shared/role-selector"
-import { CameraLanding } from "@/components/cameras/camera-landing"
 import { GalponeroForms } from "@/components/forms/galponero-forms"
 import { PedidosSistema } from "@/components/orders/pedidos-sistema"
 import { ConnectionStatus } from "@/components/shared/connection-status"
+import { UserMenu } from "@/components/shared/user-menu"
+import { NotificationsModal } from "@/components/shared/notifications-modal"
 import { useAppState } from "@/lib/hooks/use-app-state"
 import { USER_ROLES } from "@/lib/constants"
 
@@ -31,9 +32,7 @@ export default function Dashboard() {
   } = useAppState()
 
   const getTabsCount = () => {
-    const canSeeCameras = selectedRole !== USER_ROLES.VETERINARIO && selectedRole !== USER_ROLES.GALPONERO
     let count = 5 // dashboard, crecimiento, inventario, reportes, predicción
-    if (canSeeCameras) count += 1 // cámaras
     if (selectedRole === USER_ROLES.GALPONERO) count += 1 // formularios
     if (selectedRole === USER_ROLES.ADMIN_GRANJA) count += 1 // pedidos
     return count
@@ -50,12 +49,11 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center space-x-4">
             <RoleSelector selectedRole={selectedRole} onRoleChange={setSelectedRole} />
-            <Button variant="outline" size="icon">
-              <Bell className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon">
+            <NotificationsModal />
+            <Button variant="outline" size="icon" onClick={() => alert("Ajustes en desarrollo")}>
               <Settings className="h-4 w-4" />
             </Button>
+            <UserMenu />
           </div>
         </div>
       </header>
@@ -82,9 +80,7 @@ export default function Dashboard() {
               <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
               <TabsTrigger value="crecimiento">Crecimiento</TabsTrigger>
               <TabsTrigger value="inventario">Inventario</TabsTrigger>
-              {selectedRole !== USER_ROLES.VETERINARIO && selectedRole !== USER_ROLES.GALPONERO && (
-                <TabsTrigger value="camaras">Cámaras</TabsTrigger>
-              )}
+              {/* Cameras removed */}
               <TabsTrigger value="reportes">Reportes</TabsTrigger>
               <TabsTrigger value="prediccion">Predicción</TabsTrigger>
               {selectedRole === USER_ROLES.GALPONERO && <TabsTrigger value="formularios">Formularios</TabsTrigger>}
@@ -108,11 +104,7 @@ export default function Dashboard() {
               <div className="text-center py-8 text-muted-foreground">Sección de inventario en desarrollo</div>
             </TabsContent>
 
-            {selectedRole !== USER_ROLES.VETERINARIO && selectedRole !== USER_ROLES.GALPONERO && (
-              <TabsContent value="camaras" className="space-y-6">
-                <CameraLanding />
-              </TabsContent>
-            )}
+            {/* Cameras removed */}
 
             <TabsContent value="reportes" className="space-y-6">
               <ReportsSection />

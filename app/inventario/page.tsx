@@ -2,13 +2,14 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Bell, Settings } from "lucide-react"
+import { Settings } from "lucide-react"
 import { RoleSelector } from "@/components/shared/role-selector"
 import { FarmSelector } from "@/components/shared/farm-selector"
 import { useAppState } from "@/lib/hooks/use-app-state"
 import { InventoryAlerts } from "@/components/inventory/inventory-alerts"
 import { StockAlerts } from "@/components/inventory/stock-alerts"
 import { TopNav } from "@/components/shared/top-nav"
+import { NotificationsModal } from "@/components/shared/notifications-modal"
 
 export default function InventoryPage() {
   const { selectedFarm, selectedShed, selectedLote, selectedRole, setSelectedFarm, setSelectedShed, setSelectedLote, setSelectedRole } = useAppState()
@@ -23,7 +24,7 @@ export default function InventoryPage() {
           </div>
           <div className="flex items-center space-x-4">
             <RoleSelector selectedRole={selectedRole} onRoleChange={setSelectedRole} />
-            <Button variant="outline" size="icon" onClick={() => alert("Notificaciones en desarrollo")}> <Bell className="h-4 w-4" /> </Button>
+            <NotificationsModal />
             <Button variant="outline" size="icon" onClick={() => alert("Ajustes en desarrollo")}> <Settings className="h-4 w-4" /> </Button>
           </div>
         </div>
@@ -43,7 +44,7 @@ export default function InventoryPage() {
         </aside>
         <main className="flex-1 p-6 space-y-6">
           <InventoryAlerts />
-          <StockAlerts alerts={[]} onCreateOrder={() => {}} />
+          <StockAlerts />
         </main>
       </div>
     </div>

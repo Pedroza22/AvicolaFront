@@ -133,6 +133,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
+CORS_ALLOW_CREDENTIALS = True  # Necesario para que las cookies funcionen con fetch
 
 # SIMPLE JWT configuration (tokens tailored for mobile/offline use)
 from datetime import timedelta

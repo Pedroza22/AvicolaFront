@@ -138,6 +138,127 @@ class ReportViewSet(viewsets.ModelViewSet):
                 )
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['get'], url_path='growth-report')
+    def growth_report(self, request):
+        """Reporte de crecimiento de lotes"""
+        flock_id = request.query_params.get('flock')
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
+        
+        if not flock_id:
+            return Response(
+                {'error': 'Se requiere el parámetro flock'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Crear reporte temporal de crecimiento
+        temp_report = Report(
+            name=f"Reporte de Crecimiento - {timezone.now().strftime('%Y-%m-%d')}",
+            report_type='growth',
+            flock_id=flock_id,
+            date_from=datetime.strptime(date_from, '%Y-%m-%d').date() if date_from else None,
+            date_to=datetime.strptime(date_to, '%Y-%m-%d').date() if date_to else timezone.now().date(),
+            created_by=request.user,
+            export_format='json'
+        )
+        
+        try:
+            service = ProductivityReportService(temp_report)
+            data = service.generate_report()
+            return Response(data)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'], url_path='mortality-report')
+    def mortality_report(self, request):
+        """Reporte de mortalidad"""
+        flock_id = request.query_params.get('flock')
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
+        
+        if not flock_id:
+            return Response(
+                {'error': 'Se requiere el parámetro flock'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        temp_report = Report(
+            name=f"Reporte de Mortalidad - {timezone.now().strftime('%Y-%m-%d')}",
+            report_type='mortality',
+            flock_id=flock_id,
+            date_from=datetime.strptime(date_from, '%Y-%m-%d').date() if date_from else None,
+            date_to=datetime.strptime(date_to, '%Y-%m-%d').date() if date_to else timezone.now().date(),
+            created_by=request.user,
+            export_format='json'
+        )
+        
+        try:
+            service = ProductivityReportService(temp_report)
+            data = service.generate_report()
+            return Response(data)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'], url_path='inventory-report')
+    def inventory_report(self, request):
+        """Reporte de inventario"""
+        farm_id = request.query_params.get('farm')
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
+        
+        temp_report = Report(
+            name=f"Reporte de Inventario - {timezone.now().strftime('%Y-%m-%d')}",
+            report_type='inventory',
+            farm_id=farm_id,
+            date_from=datetime.strptime(date_from, '%Y-%m-%d').date() if date_from else None,
+            date_to=datetime.strptime(date_to, '%Y-%m-%d').date() if date_to else timezone.now().date(),
+            created_by=request.user,
+            export_format='json'
+        )
+        
+        try:
+            service = ProductivityReportService(temp_report)
+            data = service.generate_report()
+            return Response(data)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'], url_path='production-report')
+    def production_report(self, request):
+        """Reporte de producción general"""
+        farm_id = request.query_params.get('farm')
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
+        
+        temp_report = Report(
+            name=f"Reporte de Producción - {timezone.now().strftime('%Y-%m-%d')}",
+            report_type='production',
+            farm_id=farm_id,
+            date_from=datetime.strptime(date_from, '%Y-%m-%d').date() if date_from else None,
+            date_to=datetime.strptime(date_to, '%Y-%m-%d').date() if date_to else timezone.now().date(),
+            created_by=request.user,
+            export_format='json'
+        )
+        
+        try:
+            service = ProductivityReportService(temp_report)
+            data = service.generate_report()
+            return Response(data)
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class ReportTemplateViewSet(viewsets.ModelViewSet):

@@ -52,14 +52,15 @@ class FlockSerializer(serializers.ModelSerializer):
     # Use SerializerMethodField and annotate return types so drf-spectacular can infer schema
     current_age_days = serializers.SerializerMethodField()
     survival_rate = serializers.SerializerMethodField()
+    name = serializers.SerializerMethodField()
 
     class Meta:
         model = Flock
         fields = [
-            'id', 'arrival_date', 'initial_quantity', 'current_quantity', 'initial_weight',
+            'id', 'name', 'arrival_date', 'initial_quantity', 'current_quantity', 'initial_weight',
             'breed', 'gender', 'supplier', 'shed', 'status', 'current_age_days', 'survival_rate', 'created_by'
         ]
-        read_only_fields = ['current_quantity', 'status', 'current_age_days', 'survival_rate', 'created_by']
+        read_only_fields = ['current_quantity', 'status', 'current_age_days', 'survival_rate', 'name', 'created_by']
 
     def validate(self, data):
         shed = data.get('shed')
@@ -135,6 +136,14 @@ class FlockSerializer(serializers.ModelSerializer):
         """Return survival rate as a percentage (0-100)."""
         try:
             return obj.survival_rate
+        except Exception:
+            return None
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_name(self, obj: Flock):
+        """Return a display name for the flock."""
+        try:
+            return f"Lote {obj.id}"
         except Exception:
             return None
 

@@ -15,18 +15,29 @@ export interface Shed {
 }
 
 export interface Lote {
-  id: string
-  name: string
-  fechaInicio: string
-  raza: string
-  proveedor: string
-  pollosIniciales: number
-  pollosActuales: number
-  diasActuales: number
-  status: "activo" | "finalizando" | "completado"
-  shedId: string
+  id: string | number
+  name?: string // Calculado en el frontend
+  arrival_date?: string
+  fechaInicio?: string
+  initial_quantity?: number
+  current_quantity?: number
+  pollosIniciales?: number
+  pollosActuales?: number
+  initial_weight?: number
+  breed?: string
+  raza?: string
+  gender?: string
+  supplier?: string
+  proveedor?: string
+  status?: "ACTIVE" | "SOLD" | "FINISHED" | "TRANSFERRED" | "activo" | "finalizando" | "completado"
+  shed?: string | number
+  shedId?: string
+  current_age_days?: number
+  diasActuales?: number
+  survival_rate?: number
   pesoPromedio?: number
   mortalidadTotal?: number
+  created_by?: number
 }
 
 export interface DailyRecord {
@@ -136,39 +147,52 @@ export interface MortalityStats {
 
 export interface User {
   id: string
-  nombre: string
+  username: string
   email: string
-  rol: "admin-empresa" | "admin-granja" | "veterinario" | "galponero"
+  identification?: string
+  phone?: string
+  role?: {
+    id: number
+    name: string
+  } | null
+  rol?: "admin-empresa" | "admin-granja" | "veterinario" | "galponero"
   farmId?: string
-}
-
-export interface Camera {
-  id: string
-  name: string
-  status: "online" | "offline" | "warning"
-  location: string
-  resolution: string
-  fps: number
-  lastUpdate: string
-  shedId: string
 }
 
 // Tipos para el estado de la aplicación
 export interface AppState {
-  selectedFarm: string
-  selectedShed: string
-  selectedLote: string
+  selectedFarm: string | undefined
+  selectedShed: string | undefined
+  selectedLote: string | undefined
   selectedRole: string
   user: User | null
 }
 
 // Tipos para alertas
 export interface StockAlert {
-  id: string
-  producto: string
-  stockActual: number
-  stockMinimo: number
-  urgencia: "critica" | "alta" | "media"
-  diasRestantes: number
-  proveedorId: string
+  id: number
+  name: string
+  location: string
+  current_stock: number
+  unit: string
+  status: {
+    status: "OUT_OF_STOCK" | "CRITICAL" | "LOW" | "NORMAL" | "UNKNOWN"
+    color: string
+    message: string
+  }
+  projected_stockout: string | null
+}
+
+export interface StockAlertsResponse {
+  alerts: {
+    critical: StockAlert[]
+    low: StockAlert[]
+    out_of_stock: StockAlert[]
+  }
+  summary: {
+    total_items: number
+    critical_count: number
+    low_count: number
+    out_of_stock_count: number
+  }
 }

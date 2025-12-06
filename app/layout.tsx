@@ -4,10 +4,11 @@ import { GeistMono } from 'geist/font/mono'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import AuthInit from '@/lib/components/auth-init'
+import { AuthGuard } from '@/lib/components/auth-guard'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
+  title: 'AvicolaTrack - Sistema de Control Avícola',
+  description: 'Sistema de gestión y control para granjas avícolas',
   generator: 'v0.app',
 }
 
@@ -20,7 +21,9 @@ export default function RootLayout({
     <html lang="es" className={`${GeistSans.className} ${GeistMono.variable}`}>
       <body>
         <AuthInit />
-        {children}
+        <AuthGuard>
+          {children}
+        </AuthGuard>
         <Analytics />
       </body>
     </html>

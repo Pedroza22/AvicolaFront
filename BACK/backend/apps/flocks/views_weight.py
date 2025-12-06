@@ -25,6 +25,29 @@ from apps.farms.models import Shed
 class DailyWeightViewSet(viewsets.ModelViewSet):
     queryset = DailyWeightRecord.objects.all()
     serializer_class = DailyWeightSerializer
+    
+    @action(detail=False, methods=['get'], url_path='latest')
+    def latest(self, request):
+        """Obtener el último peso registrado para un lote"""
+        flock_id = request.query_params.get('flock')
+        
+        if not flock_id:
+            return Response(
+                {'error': 'Se requiere el parámetro flock'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        latest_record = DailyWeightRecord.objects.filter(
+            flock_id=flock_id
+        ).order_by('-date').first()
+        
+        if not latest_record:
+            return Response(
+                {'error': 'No se encontraron registros de peso para este lote'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        return Response(DailyWeightSerializer(latest_record).data)
 
     @extend_schema(
         description='Sincroniza en bloque registros de peso promedio desde dispositivos móviles. Devuelve un resumen con detalles por client_id indicando si se creó, se promedió o se reportó conflicto.',

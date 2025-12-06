@@ -1,7 +1,10 @@
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field, OpenApiTypes
 
-from .models import InventoryItem, InventoryConsumptionRecord, FoodBatch, FoodConsumptionRecord
+from .models import (
+    InventoryItem, InventoryConsumptionRecord, FoodBatch, 
+    FoodConsumptionRecord, Supplier, Order, OrderItem
+)
 
 
 class InventoryConsumptionRecordSerializer(serializers.ModelSerializer):
@@ -111,4 +114,72 @@ class AddStockSerializer(serializers.Serializer):
 	supplier = serializers.CharField(required=False, allow_blank=True)
 	lot_number = serializers.CharField(required=False, allow_blank=True)
 	expiry_date = serializers.DateField(required=False, allow_null=True)
+
+
+# ===== SUPPLIERS & ORDERS =====
+
+class SupplierSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = Supplier
+		fields = [
+			'id', 'name', 'contact_name', 'email', 'phone', 'address',
+			'products', 'delivery_time_days', 'rating', 'is_active',
+			'created_at', 'updated_at'
+		]
+		read_only_fields = ['created_at', 'updated_at']
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = OrderItem
+		fields = [
+			'id', 'product_name', 'quantity', 'unit', 'unit_price', 
+			'subtotal', 'inventory_item'
+		]
+		read_only_fields = ['subtotal']
+
+
+class OrderSerializer(serializers.ModelSerializer):
+	items = OrderItemSerializer(many=True, read_only=True)
+	supplier_name = serializers.CharField(source='supplier.name', read_only=True)
+	farm_name = serializers.CharField(source='farm.name', read_only=True)
+	created_by_name = serializers.CharField(source='created_by.username', read_only=True)
+	
+	class Meta:
+		model = Order
+		fields = [
+			'id', 'farm', 'farm_name', 'supplier', 'supplier_name', 
+			'status', 'urgency', 'order_date', 'expected_delivery_date',
+			'actual_delivery_date', 'total', 'notes', 'created_by',
+			'created_by_name', 'items'
+		]
+		read_only_fields = ['order_date', 'total', 'created_by']
+
+
+class OrderCreateSerializer(serializers.ModelSerializer):
+	"""Serializer para crear pedidos con items"""
+	items = OrderItemSerializer(many=True)
+	
+	class Meta:
+		model = Order
+		fields = [
+			'farm', 'supplier', 'urgency', 'expected_delivery_date',
+			'notes', 'items'
+		]
+	
+	def create(self, validated_data):
+		items_data = validated_data.pop('items')
+		order = Order.objects.create(**validated_data)
+		
+		for item_data in items_data:
+			OrderItem.objects.create(order=order, **item_data)
+		
+		order.calculate_total()
+		return order
+
+
+class OrderStatusUpdateSerializer(serializers.Serializer):
+	"""Serializer para actualizar estado del pedido"""
+	status = serializers.ChoiceField(choices=Order.STATUS_CHOICES)
+	actual_delivery_date = serializers.DateField(required=False, allow_null=True)
 

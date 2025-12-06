@@ -1,24 +1,71 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TrendingUp, TrendingDown, Users, AlertTriangle } from "lucide-react"
+import { loteRepository } from "@/lib/repositories/lote.repository"
+import type { Lote } from "@/lib/types"
 
 interface DashboardStatsProps {
-  selectedFarm: string
-  selectedShed: string
-  selectedLote: string
+  selectedFarm?: string
+  selectedShed?: string
+  selectedLote?: string
   galponeroData?: any
 }
 
 export function DashboardStats({ selectedFarm, selectedShed, selectedLote, galponeroData }: DashboardStatsProps) {
+  const [loteData, setLoteData] = useState<Lote | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!selectedLote) return
+
+    const loadLoteData = async () => {
+      try {
+        setLoading(true)
+        const data = await loteRepository.getById(selectedLote)
+        setLoteData(data)
+      } catch (error) {
+        console.error("Error loading lote data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadLoteData()
+  }, [selectedLote])
+
+  // Usar datos reales si están disponibles, sino fallback a datos de ejemplo
   const liveData = {
-    pollosActivos: galponeroData?.numeroPollos || 8450,
-    pesoPromedio: galponeroData?.pesoPromedio || 2.1,
+    pollosActivos: loteData?.current_quantity || loteData?.pollosActuales || galponeroData?.numeroPollos || 8450,
+    pesoPromedio: loteData?.pesoPromedio || galponeroData?.pesoPromedio || 2.1,
     consumoDiario: galponeroData?.consumoAlimento || 58,
     mortalidadDia: galponeroData?.mortalidadDia || 5,
-    diaLote: galponeroData?.diaLote || 35,
+    diaLote: loteData?.current_age_days || loteData?.diasActuales || galponeroData?.diaLote || 35,
     conversionAlimenticia: 1.65,
+    raza: loteData?.breed || loteData?.raza || galponeroData?.raza || "Cobb 500",
+    mortalidadTotal: loteData?.mortalidadTotal || 0,
   }
 
-  const loteDisplay = selectedLote.replace("lote-", "Lote ")
+  const loteIdDisplay = loteData?.id ?? (typeof selectedLote === "string"
+    ? (selectedLote.startsWith("lote-") ? selectedLote.replace("lote-", "") : selectedLote)
+    : undefined)
+
+  const loteDisplay = loteData?.name || `Lote ${loteIdDisplay ?? "—"}`
+  const tasaMortalidadHoy = liveData.pollosActivos > 0 
+    ? ((liveData.mortalidadDia / liveData.pollosActivos) * 100).toFixed(2)
+    : "0.00"
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Card className="animate-pulse bg-gray-100">
+          <CardHeader><div className="h-6 bg-gray-200 rounded w-1/3"></div></CardHeader>
+          <CardContent><div className="h-20 bg-gray-200 rounded"></div></CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">
@@ -40,7 +87,7 @@ export function DashboardStats({ selectedFarm, selectedShed, selectedLote, galpo
             </div>
             <div>
               <span className="text-blue-600">Raza:</span>
-              <p className="font-bold text-sm">{galponeroData?.raza || "Cobb 500"}</p>
+              <p className="font-bold text-sm">{liveData.raza}</p>
             </div>
             <div>
               <span className="text-blue-600">Pollos Activos:</span>
@@ -76,7 +123,9 @@ export function DashboardStats({ selectedFarm, selectedShed, selectedLote, galpo
           <CardContent>
             <div className="text-2xl font-bold">{liveData.mortalidadDia}</div>
             <p className="text-xs text-muted-foreground">
-              <span className="text-green-600">0.06%</span> del total
+              <span className={`${parseFloat(tasaMortalidadHoy) > 1 ? 'text-red-600' : 'text-green-600'}`}>
+                {tasaMortalidadHoy}%
+              </span> del total
             </p>
           </CardContent>
         </Card>

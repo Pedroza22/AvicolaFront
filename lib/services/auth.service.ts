@@ -29,6 +29,19 @@ export class AuthService {
       const tokenPayload = secureStorage.parseToken(access)
       const expiresIn = tokenPayload?.exp ? tokenPayload.exp - Math.floor(Date.now() / 1000) : 3600
       secureStorage.setAccessToken(access, expiresIn)
+      
+      // Establecer cookie de sesión usando API route (más confiable que document.cookie)
+      if (typeof window !== 'undefined') {
+        try {
+          await fetch('/api/auth/set-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ expiresIn })
+          })
+        } catch (e) {
+          console.warn('Could not set session cookie:', e)
+        }
+      }
     }
     if (refresh) {
       secureStorage.setRefreshToken(refresh)
@@ -49,6 +62,15 @@ export class AuthService {
     
     // Limpiar almacenamiento seguro
     secureStorage.clearAll()
+    
+    // Eliminar cookie de sesión usando API route
+    if (typeof window !== 'undefined') {
+      try {
+        await fetch('/api/auth/set-session', { method: 'DELETE' })
+      } catch (e) {
+        console.warn('Could not delete session cookie:', e)
+      }
+    }
     
     if (typeof window !== "undefined" && this.refreshTimeoutId) {
       window.clearTimeout(this.refreshTimeoutId)

@@ -1,41 +1,71 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { AlertTriangle, X } from "lucide-react"
+import { AlertTriangle, X, Loader2, CheckCircle } from "lucide-react"
 import { useAppState } from "@/lib/hooks/use-app-state"
 import { orderRepository } from "@/lib/repositories/order.repository"
+import { inventoryRepository } from "@/lib/repositories/inventory.repository"
+import type { StockAlert } from "@/lib/types"
 
 export function InventoryAlerts() {
   const { selectedFarm, user } = useAppState()
 
+  const [criticalAlerts, setCriticalAlerts] = useState<StockAlert[]>([])
+  const [loading, setLoading] = useState(true)
   const [visible, setVisible] = useState(true)
   const [openModal, setOpenModal] = useState(false)
+  const [selectedAlert, setSelectedAlert] = useState<StockAlert | null>(null)
 
-  const [producto, setProducto] = useState("Alimento Concentrado")
+  const [producto, setProducto] = useState("")
   const [cantidad, setCantidad] = useState<number>(50)
-  const [unidad, setUnidad] = useState("bultos")
+  const [unidad, setUnidad] = useState("KG")
   const [precio, setPrecio] = useState<number>(0)
-  const [proveedorId, setProveedorId] = useState("proveedor-01")
+  const [proveedorId, setProveedorId] = useState("")
   const [urgencia, setUrgencia] = useState<"normal" | "urgente" | "critica">("critica")
   const [observaciones, setObservaciones] = useState("")
   const [saving, setSaving] = useState(false)
 
-  const alert = {
-    id: 1,
-    type: "critical",
-    title: "Stock Crítico - Alimento Concentrado",
-    description: "Quedan menos de 2 días de alimento en Granja Norte",
-    action: "Solicitar Reposición",
+  useEffect(() => {
+    loadStockAlerts()
+  }, [])
+
+  const loadStockAlerts = async () => {
+    try {
+      setLoading(true)
+      const response = await inventoryRepository.getStockAlerts()
+      // Show critical and out_of_stock alerts
+      const urgentAlerts = [...response.alerts.critical, ...response.alerts.out_of_stock]
+      setCriticalAlerts(urgentAlerts)
+    } catch (error) {
+      console.error("Error loading stock alerts:", error)
+      setCriticalAlerts([])
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleDismiss = () => setVisible(false)
-  const handleOpen = () => setOpenModal(true)
-  const handleClose = () => setOpenModal(false)
+  
+  const handleOpen = (alert: StockAlert) => {
+    setSelectedAlert(alert)
+    setProducto(alert.name)
+    setUnidad(alert.unit)
+    // Suggest reorder quantity based on 7 days of average consumption
+    const suggestedQty = Math.max(50, Math.ceil(alert.current_stock * 7))
+    setCantidad(suggestedQty)
+    setObservaciones(`Stock crítico: ${alert.status.message}. Ubicación: ${alert.location}`)
+    setOpenModal(true)
+  }
+  
+  const handleClose = () => {
+    setOpenModal(false)
+    setSelectedAlert(null)
+  }
 
   const handleCreateOrder = async () => {
     try {
@@ -71,23 +101,55 @@ export function InventoryAlerts() {
 
   if (!visible) return null
 
+  if (loading) {
+    return (
+      <div className="space-y-3 mb-6">
+        <Alert className="border-blue-200 bg-blue-50">
+          <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
+          <AlertTitle className="text-blue-800">Cargando alertas de inventario...</AlertTitle>
+        </Alert>
+      </div>
+    )
+  }
+
+  if (criticalAlerts.length === 0) {
+    return (
+      <div className="space-y-3 mb-6">
+        <Alert className="border-green-200 bg-green-50">
+          <CheckCircle className="h-4 w-4 text-green-600" />
+          <AlertTitle className="text-green-800">Stock en Niveles Óptimos</AlertTitle>
+          <AlertDescription className="text-green-700">
+            No hay productos con stock crítico en este momento
+          </AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-3 mb-6">
-      <Alert className="border-red-200 bg-red-50">
-        <AlertTriangle className="h-4 w-4 text-red-600" />
-        <AlertTitle className="text-red-800">{alert.title}</AlertTitle>
-        <AlertDescription className="text-red-700 flex items-center justify-between">
-          <span>{alert.description}</span>
-          <div className="flex gap-2">
-            <Button size="sm" variant="destructive" onClick={handleOpen}>
-              {alert.action}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={handleDismiss} aria-label="Cerrar aviso">
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </AlertDescription>
-      </Alert>
+      {criticalAlerts.map((alert) => (
+        <Alert key={alert.id} className="border-red-200 bg-red-50">
+          <AlertTriangle className="h-4 w-4 text-red-600" />
+          <AlertTitle className="text-red-800">
+            Stock {alert.status.status === "OUT_OF_STOCK" ? "Agotado" : "Crítico"} - {alert.name}
+          </AlertTitle>
+          <AlertDescription className="text-red-700 flex items-center justify-between">
+            <span>
+              {alert.location} | Stock: {alert.current_stock} {alert.unit} | {alert.status.message}
+              {alert.projected_stockout && ` | Agotamiento: ${new Date(alert.projected_stockout).toLocaleDateString()}`}
+            </span>
+            <div className="flex gap-2">
+              <Button size="sm" variant="destructive" onClick={() => handleOpen(alert)}>
+                Solicitar Reposición
+              </Button>
+              <Button size="sm" variant="ghost" onClick={handleDismiss} aria-label="Cerrar aviso">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      ))}
 
       {openModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">

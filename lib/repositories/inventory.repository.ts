@@ -1,6 +1,6 @@
 import { httpClient } from "@/lib/api/http-client"
 import { API_ENDPOINTS } from "@/lib/config/api.config"
-import type { InventoryItem, StockAlert } from "@/lib/types"
+import type { InventoryItem, StockAlertsResponse } from "@/lib/types"
 
 export class InventoryRepository {
   async getAll(): Promise<InventoryItem[]> {
@@ -13,8 +13,8 @@ export class InventoryRepository {
     return response.data
   }
 
-  async getAlerts(farmId: string): Promise<StockAlert[]> {
-    const response = await httpClient.get<StockAlert[]>(API_ENDPOINTS.inventory.alerts(farmId))
+  async getStockAlerts(): Promise<StockAlertsResponse> {
+    const response = await httpClient.get<StockAlertsResponse>(API_ENDPOINTS.inventory.alerts)
     return response.data
   }
 

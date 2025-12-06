@@ -16,10 +16,7 @@ const BASE_ITEMS = [
 
 function getNavItems(selectedRole: string) {
   const items = [...BASE_ITEMS]
-  // Cámaras solo visible para Admin Empresa y Admin Granja
-  if (selectedRole !== USER_ROLES.VETERINARIO && selectedRole !== USER_ROLES.GALPONERO) {
-    items.splice(1, 0, { href: "/camaras", label: "Cámaras" }) // insert after Dashboard
-  }
+  // Additional role-based items
   if (selectedRole === USER_ROLES.GALPONERO) {
     items.push({ href: "/formularios", label: "Formularios" })
   }

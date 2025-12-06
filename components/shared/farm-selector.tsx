@@ -28,6 +28,7 @@ export function FarmSelector({
   const [loadingFarms, setLoadingFarms] = React.useState(false)
   const [loadingSheds, setLoadingSheds] = React.useState(false)
   const [loadingLotes, setLoadingLotes] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     let mounted = true
@@ -35,9 +36,43 @@ export function FarmSelector({
     import("@/lib/repositories/farm.repository").then((mod) => {
       return mod.farmRepository.getAll()
     }).then((data) => {
-      if (mounted) setFarms(data.map((f: any) => ({ id: String(f.id), name: f.name })))
-    }).catch(() => {
-      // keep fallback empty
+      if (mounted) {
+        const farmList = data.map((f: any) => ({ id: String(f.id), name: f.name }))
+        console.log('🏠 Farms loaded:', farmList)
+        setFarms(farmList)
+        setError(null)
+        // Auto-select first farm if none selected
+        if (!selectedFarm && farmList.length > 0) {
+          console.log('🎯 Auto-selecting farm:', farmList[0].id)
+          onFarmChange(farmList[0].id)
+        }
+      }
+    }).catch(async (error) => {
+      console.error('❌ Error loading farms:', error)
+      setError(error?.message || 'Error cargando granjas')
+      // If unauthorized, try refresh once and retry
+      try {
+        const isUnauthorized = error?.status === 401 || error?.code === 'UNAUTHORIZED' || (error?.message && error.message.toLowerCase().includes('sesión'))
+        if (isUnauthorized) {
+          const { AuthService } = await import('@/lib/services/auth.service')
+          const refreshed = await AuthService.refresh()
+          if (refreshed?.access) {
+            // retry fetch
+            const mod = await import('@/lib/repositories/farm.repository')
+            const data = await mod.farmRepository.getAll()
+            if (mounted) {
+              const farmList = data.map((f: any) => ({ id: String(f.id), name: f.name }))
+              console.log('🏠 Farms loaded after refresh:', farmList)
+              setFarms(farmList)
+              if (!selectedFarm && farmList.length > 0) {
+                onFarmChange(farmList[0].id)
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error('❌ Error during refresh+retry:', e)
+      }
     }).finally(() => mounted && setLoadingFarms(false))
     return () => { mounted = false }
   }, [])
@@ -51,9 +86,41 @@ export function FarmSelector({
     setLoadingSheds(true)
     import("@/lib/repositories/shed.repository").then((mod) => mod.shedRepository.getByFarm(selectedFarm))
       .then((data) => {
-        if (mounted) setSheds(data.map((s: any) => ({ id: String(s.id), name: s.name })))
+        if (mounted) {
+          const shedList = data.map((s: any) => ({ id: String(s.id), name: s.name }))
+          console.log('🏚️ Sheds loaded for farm', selectedFarm, ':', shedList)
+          setSheds(shedList)
+          // Auto-select first shed if none selected
+          if (!selectedShed && shedList.length > 0) {
+            console.log('🎯 Auto-selecting shed:', shedList[0].id)
+            onShedChange(shedList[0].id)
+          }
+        }
       })
-      .catch(() => {})
+      .catch(async (error) => {
+        console.error('❌ Error loading sheds:', error)
+        try {
+          const isUnauthorized = error?.status === 401 || error?.code === 'UNAUTHORIZED' || (error?.message && error.message.toLowerCase().includes('sesión'))
+          if (isUnauthorized) {
+            const { AuthService } = await import('@/lib/services/auth.service')
+            const refreshed = await AuthService.refresh()
+            if (refreshed?.access) {
+              const mod = await import('@/lib/repositories/shed.repository')
+              const data = await mod.shedRepository.getByFarm(selectedFarm)
+              if (mounted) {
+                const shedList = data.map((s: any) => ({ id: String(s.id), name: s.name }))
+                console.log('🏚️ Sheds loaded after refresh for farm', selectedFarm, ':', shedList)
+                setSheds(shedList)
+                if (!selectedShed && shedList.length > 0) {
+                  onShedChange(shedList[0].id)
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.error('❌ Error during refresh+retry for sheds:', e)
+        }
+      })
       .finally(() => mounted && setLoadingSheds(false))
     return () => { mounted = false }
   }, [selectedFarm])
@@ -67,14 +134,61 @@ export function FarmSelector({
     setLoadingLotes(true)
     import("@/lib/repositories/lote.repository").then((mod) => mod.loteRepository.getByShed(selectedShed))
       .then((data) => {
-        if (mounted) setLotes(data.map((l: any) => ({ id: String(l.id), name: l.name, diasActuales: l.current_age_days ?? l.diasActuales })))
+        if (mounted) {
+          const loteList = data.map((l: any) => ({ id: String(l.id), name: l.name || `Lote ${l.id}`, diasActuales: l.current_age_days ?? l.diasActuales }))
+          console.log('🐔 Lotes loaded for shed', selectedShed, ':', loteList)
+          setLotes(loteList)
+          // Auto-select first lote if none selected
+          if (!selectedLote && loteList.length > 0) {
+            console.log('🎯 Auto-selecting lote:', loteList[0].id)
+            onLoteChange(loteList[0].id)
+          }
+        }
       })
-      .catch(() => {})
+      .catch(async (error) => {
+        console.error('❌ Error loading lotes:', error)
+        try {
+          const isUnauthorized = error?.status === 401 || error?.code === 'UNAUTHORIZED' || (error?.message && error.message.toLowerCase().includes('sesión'))
+          if (isUnauthorized) {
+            const { AuthService } = await import('@/lib/services/auth.service')
+            const refreshed = await AuthService.refresh()
+            if (refreshed?.access) {
+              const mod = await import('@/lib/repositories/lote.repository')
+              const data = await mod.loteRepository.getByShed(selectedShed)
+              if (mounted) {
+                const loteList = data.map((l: any) => ({ id: String(l.id), name: l.name || `Lote ${l.id}`, diasActuales: l.current_age_days ?? l.diasActuales }))
+                console.log('🐔 Lotes loaded after refresh for shed', selectedShed, ':', loteList)
+                setLotes(loteList)
+                if (!selectedLote && loteList.length > 0) {
+                  onLoteChange(loteList[0].id)
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.error('❌ Error during refresh+retry for lotes:', e)
+        }
+      })
       .finally(() => mounted && setLoadingLotes(false))
     return () => { mounted = false }
   }, [selectedShed])
 
   const selectedLoteData = lotes.find((lote) => lote.id === selectedLote)
+
+  if (error && farms.length === 0) {
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-yellow-800">No se pudieron cargar las granjas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-yellow-700">{error}. Abre la consola para ver detalles o vuelve a iniciar sesión.</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">

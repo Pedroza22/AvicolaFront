@@ -7,11 +7,13 @@ ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 from pathlib import Path
 
 # Use SQLite in development to avoid requiring a local MySQL server
-BASE_DIR = Path(__file__).resolve().parent.parent
+# BASE_DIR in base.py points to backend/ directory
+# Database file is in backend/avicolatrack/db.sqlite3
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 DATABASES = {
 	'default': {
 		'ENGINE': 'django.db.backends.sqlite3',
-		'NAME': BASE_DIR / 'db.sqlite3',
+		'NAME': BASE_DIR / 'avicolatrack' / 'db.sqlite3',
 	}
 }
 

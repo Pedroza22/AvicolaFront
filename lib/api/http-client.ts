@@ -94,6 +94,15 @@ export class HttpClient {
     try {
       // Obtener token de forma segura (ya no usa localStorage directamente)
       const token = secureStorage.getAccessToken()
+      
+      // Debug: Log cuando se hace una petición
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🌐 Request: ${options.method || 'GET'} ${endpoint}`)
+        console.log(`🔑 Token presente:`, token ? 'SÍ' : 'NO')
+        if (token) {
+          console.log(`🔑 Token (primeros 20 chars):`, token.substring(0, 20) + '...')
+        }
+      }
 
       const response = await fetch(`${this.baseURL}${endpoint}`, {
         ...options,
@@ -108,6 +117,11 @@ export class HttpClient {
       clearTimeout(timeoutId)
 
       if (!response.ok) {
+        // Debug: Log de error de respuesta
+        if (process.env.NODE_ENV === 'development') {
+          console.error(`❌ Response error: ${response.status} ${response.statusText}`)
+        }
+        
         // Manejar 401 - intento de refresh
         if (response.status === 401) {
           const refreshed = await this.handleTokenRefresh()

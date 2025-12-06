@@ -247,5 +247,91 @@ class InventoryConsumptionRecord(models.Model):
 			pass
 
 
+class Supplier(models.Model):
+	"""Proveedor de insumos para la granja"""
+	name = models.CharField(max_length=200, verbose_name='Nombre')
+	contact_name = models.CharField(max_length=200, verbose_name='Nombre de contacto')
+	email = models.EmailField()
+	phone = models.CharField(max_length=20, verbose_name='Teléfono')
+	address = models.TextField(verbose_name='Dirección')
+	products = models.JSONField(default=list, help_text='Lista de productos que ofrece')
+	delivery_time_days = models.PositiveIntegerField(default=3, verbose_name='Tiempo de entrega (días)')
+	rating = models.DecimalField(max_digits=3, decimal_places=2, default=5.0, verbose_name='Calificación')
+	is_active = models.BooleanField(default=True)
+	created_at = models.DateTimeField(auto_now_add=True)
+	updated_at = models.DateTimeField(auto_now=True)
 
-# Create your models here.
+	class Meta:
+		verbose_name = 'Proveedor'
+		verbose_name_plural = 'Proveedores'
+		ordering = ['name']
+
+	def __str__(self):
+		return self.name
+
+
+class Order(models.Model):
+	"""Pedido de insumos a proveedores"""
+	STATUS_CHOICES = [
+		('pendiente', 'Pendiente'),
+		('en-transito', 'En Tránsito'),
+		('entregado', 'Entregado'),
+		('cancelado', 'Cancelado'),
+	]
+	URGENCY_CHOICES = [
+		('normal', 'Normal'),
+		('urgente', 'Urgente'),
+		('critica', 'Crítica'),
+	]
+
+	farm = models.ForeignKey('farms.Farm', on_delete=models.CASCADE, related_name='orders')
+	supplier = models.ForeignKey(Supplier, on_delete=models.PROTECT, related_name='orders')
+	status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pendiente')
+	urgency = models.CharField(max_length=20, choices=URGENCY_CHOICES, default='normal')
+	order_date = models.DateTimeField(auto_now_add=True)
+	expected_delivery_date = models.DateField(verbose_name='Fecha esperada de entrega')
+	actual_delivery_date = models.DateField(null=True, blank=True, verbose_name='Fecha real de entrega')
+	total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+	notes = models.TextField(blank=True, verbose_name='Observaciones')
+	created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='created_orders')
+
+	class Meta:
+		verbose_name = 'Pedido'
+		verbose_name_plural = 'Pedidos'
+		ordering = ['-order_date']
+
+	def __str__(self):
+		return f"Pedido #{self.id} - {self.supplier.name} ({self.get_status_display()})"
+
+	def calculate_total(self):
+		"""Calcular el total del pedido basado en items"""
+		total = self.items.aggregate(total=models.Sum('subtotal'))['total'] or 0
+		self.total = total
+		self.save(update_fields=['total'])
+		return total
+
+
+class OrderItem(models.Model):
+	"""Item individual dentro de un pedido"""
+	order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
+	product_name = models.CharField(max_length=200, verbose_name='Producto')
+	quantity = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Cantidad')
+	unit = models.CharField(max_length=30, verbose_name='Unidad')
+	unit_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Precio unitario')
+	subtotal = models.DecimalField(max_digits=12, decimal_places=2, verbose_name='Subtotal')
+	# Opcional: relación con item de inventario si aplica
+	inventory_item = models.ForeignKey(InventoryItem, on_delete=models.SET_NULL, null=True, blank=True, related_name='order_items')
+
+	class Meta:
+		verbose_name = 'Item de pedido'
+		verbose_name_plural = 'Items de pedido'
+
+	def __str__(self):
+		return f"{self.product_name} x{self.quantity}"
+
+	def save(self, *args, **kwargs):
+		# Auto-calcular subtotal
+		self.subtotal = self.quantity * self.unit_price
+		super().save(*args, **kwargs)
+		# Actualizar total del pedido
+		self.order.calculate_total()

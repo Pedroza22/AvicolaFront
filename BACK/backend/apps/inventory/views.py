@@ -7,12 +7,13 @@ from django.utils import timezone
 from decimal import Decimal
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
-from .models import InventoryItem, FoodBatch, FoodConsumptionRecord
+from .models import InventoryItem, FoodBatch, FoodConsumptionRecord, Supplier, Order, OrderItem
 from .serializers import (
     InventoryItemSerializer, BulkStockUpdateSerializer, FoodBatchSerializer,
     FoodConsumptionRecordSerializer, FoodConsumptionRequestSerializer,
     BulkFoodConsumptionSerializer, FIFOConsumptionResultSerializer,
-    AddStockSerializer
+    AddStockSerializer, SupplierSerializer, OrderSerializer, 
+    OrderCreateSerializer, OrderStatusUpdateSerializer
 )
 from .permissions import CanManageInventory
 from apps.flocks.models import Flock
@@ -130,6 +131,39 @@ class InventoryViewSet(viewsets.ModelViewSet):
         batch.save()
         
         return Response(FoodBatchSerializer(batch).data, status=status.HTTP_201_CREATED)
+    
+    @action(detail=True, methods=['patch'], url_path='stock')
+    def update_stock(self, request, pk=None):
+        """Actualizar stock del item de inventario"""
+        item = self.get_object()
+        new_stock = request.data.get('current_stock')
+        
+        if new_stock is None:
+            return Response(
+                {'error': 'Se requiere el campo current_stock'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            new_stock = Decimal(str(new_stock))
+            if new_stock < 0:
+                return Response(
+                    {'error': 'El stock no puede ser negativo'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            item.current_stock = new_stock
+            item.save()
+            
+            return Response({
+                'message': 'Stock actualizado correctamente',
+                'item': InventoryItemSerializer(item).data
+            })
+        except (ValueError, TypeError):
+            return Response(
+                {'error': 'Valor de stock inválido'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
     @extend_schema(
         request=FoodConsumptionRequestSerializer,
@@ -275,4 +309,102 @@ class FoodConsumptionRecordViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Default: solo registros de lotes asignados al galponero
         return FoodConsumptionRecord.objects.filter(flock__shed__assigned_worker=user).order_by('-date')
+
+
+# ===== SUPPLIERS & ORDERS =====
+
+class SupplierViewSet(viewsets.ModelViewSet):
+    """ViewSet para gestión de proveedores"""
+    queryset = Supplier.objects.all()
+    serializer_class = SupplierSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        queryset = Supplier.objects.all()
+        # Filtrar solo activos por defecto
+        if self.request.query_params.get('active', 'true').lower() == 'true':
+            queryset = queryset.filter(is_active=True)
+        return queryset.order_by('-rating', 'name')
+
+
+class OrderViewSet(viewsets.ModelViewSet):
+    """ViewSet para gestión de pedidos"""
+    queryset = Order.objects.all()
+    permission_classes = [IsAuthenticated]
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return OrderCreateSerializer
+        return OrderSerializer
+    
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Order.objects.all()
+        
+        # Filtrar por estado si se especifica
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        
+        # Filtrar por urgencia
+        urgency_filter = self.request.query_params.get('urgency')
+        if urgency_filter:
+            queryset = queryset.filter(urgency=urgency_filter)
+        
+        # Filtrar por granja
+        farm_id = self.request.query_params.get('farm')
+        if farm_id:
+            queryset = queryset.filter(farm_id=farm_id)
+        
+        # Permisos de usuario
+        if hasattr(user, 'role') and user.role and user.role.name == 'Administrador Sistema':
+            return queryset.order_by('-order_date')
+        
+        if hasattr(user, 'role') and user.role and user.role.name == 'Administrador de Granja':
+            return queryset.filter(farm__farm_manager=user).order_by('-order_date')
+        
+        # Default: pedidos de granjas asignadas al usuario
+        return queryset.filter(farm__in=user.farms.all()).order_by('-order_date')
+    
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+    
+    @action(detail=True, methods=['post'], url_path='send')
+    def send(self, request, pk=None):
+        """Enviar pedido al proveedor (cambiar estado a 'en-transito')"""
+        order = self.get_object()
+        
+        if order.status != 'pendiente':
+            return Response(
+                {'error': f'No se puede enviar un pedido con estado {order.status}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        order.status = 'en-transito'
+        order.save()
+        
+        return Response({
+            'message': 'Pedido enviado al proveedor',
+            'order': OrderSerializer(order).data
+        })
+    
+    @action(detail=True, methods=['patch'], url_path='update-status')
+    def update_status(self, request, pk=None):
+        """Actualizar estado del pedido"""
+        order = self.get_object()
+        serializer = OrderStatusUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        new_status = serializer.validated_data['status']
+        actual_delivery_date = serializer.validated_data.get('actual_delivery_date')
+        
+        order.status = new_status
+        if actual_delivery_date:
+            order.actual_delivery_date = actual_delivery_date
+        order.save()
+        
+        return Response({
+            'message': f'Estado actualizado a {new_status}',
+            'order': OrderSerializer(order).data
+        })
 
