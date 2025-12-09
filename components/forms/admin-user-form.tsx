@@ -1,11 +1,12 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { userRepository } from "@/lib/repositories/user.repository"
-import { USER_ROLES } from "@/lib/constants"
+import { roleRepository, type Role } from "@/lib/repositories/role.repository"
+import { toast } from "sonner"
 
 type Props = {
   onCreated?: (u: any) => void
@@ -37,6 +38,27 @@ export default function AdminUserForm({ onCreated }: Props) {
   const [passwordConfirm, setPasswordConfirm] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  
+  const [roles, setRoles] = useState<Role[]>([])
+  const [rolesLoading, setRolesLoading] = useState(true)
+
+  useEffect(() => {
+    loadRoles()
+  }, [])
+
+  const loadRoles = async () => {
+    try {
+      setRolesLoading(true)
+      const data = await roleRepository.getAll()
+      setRoles(data)
+    } catch (e) {
+      console.error("Error loading roles:", e)
+      toast.error("No se pudieron cargar los roles")
+      setRoles([])
+    } finally {
+      setRolesLoading(false)
+    }
+  }
 
   const validate = () => {
     setError(null)
@@ -79,9 +101,12 @@ export default function AdminUserForm({ onCreated }: Props) {
       setPassword("")
       setPasswordConfirm("")
       setRoleId(undefined)
+      toast.success("Usuario creado correctamente")
       onCreated?.(created)
     } catch (err: any) {
-      setError(err?.response?.data?.detail || err?.message || "Error al crear usuario")
+      const errorMsg = err?.response?.data?.detail || err?.message || "Error al crear usuario"
+      setError(errorMsg)
+      toast.error(errorMsg)
     } finally {
       setLoading(false)
     }
@@ -113,14 +138,23 @@ export default function AdminUserForm({ onCreated }: Props) {
 
       <div>
         <Label htmlFor="role">Rol (opcional)</Label>
-        <select id="role" className="w-full rounded-md border px-2 py-2" value={roleId ?? ""} onChange={(e) => setRoleId(e.target.value || undefined)}>
+        <select 
+          id="role" 
+          className="w-full rounded-md border px-2 py-2" 
+          value={roleId ?? ""} 
+          onChange={(e) => setRoleId(e.target.value || undefined)}
+          disabled={rolesLoading}
+        >
           <option value="">Sin rol</option>
-          <option value="1">Administrador Sistema</option>
-          <option value="2">Administrador de Granja</option>
-          <option value="3">Veterinario</option>
-          <option value="4">Galponero</option>
+          {roles.map((role) => (
+            <option key={role.id} value={role.id}>
+              {role.name}
+            </option>
+          ))}
         </select>
-        <div className="text-xs text-muted-foreground mt-1">Si los IDs de rol difieren, deja Sin rol y asigna desde el backend.</div>
+        {rolesLoading && (
+          <div className="text-xs text-muted-foreground mt-1">Cargando roles...</div>
+        )}
       </div>
 
       <div>
@@ -139,3 +173,4 @@ export default function AdminUserForm({ onCreated }: Props) {
     </form>
   )
 }
+

@@ -3,9 +3,9 @@ import { persist } from "zustand/middleware"
 import type { AppState, User } from "@/lib/types"
 
 interface AppStore extends AppState {
-  setSelectedFarm: (farmId: string) => void
-  setSelectedShed: (shedId: string) => void
-  setSelectedLote: (loteId: string) => void
+  setSelectedFarm: (farmId: string | undefined) => void
+  setSelectedShed: (shedId: string | undefined) => void
+  setSelectedLote: (loteId: string | undefined) => void
   setSelectedRole: (role: string) => void
   setUser: (user: User | null) => void
 }

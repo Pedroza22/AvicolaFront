@@ -11,6 +11,8 @@ from .serializers import UserRegistrationSerializer
 from .serializers import AdminUserSerializer
 from .serializers import PasswordResetRequestSerializer, PasswordResetConfirmSerializer
 from .serializers import UserSerializer
+from .serializers import RoleSerializer
+from .models import Role
 from rest_framework.permissions import IsAuthenticated
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
@@ -61,6 +63,17 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 				}
 
 		return response
+
+
+class RoleViewSet(viewsets.ReadOnlyModelViewSet):
+	"""
+	ViewSet para exponer roles al frontend.
+	Read-only: solo permite listar y obtener detalles de roles.
+	Requiere autenticación.
+	"""
+	queryset = Role.objects.all()
+	serializer_class = RoleSerializer
+	permission_classes = [permissions.IsAuthenticated]
 
 
 class AdminUserViewSet(viewsets.ModelViewSet):

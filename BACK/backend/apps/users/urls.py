@@ -1,11 +1,12 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
-from .views import RegisterAPIView, CustomTokenObtainPairView, AdminUserViewSet
+from .views import RegisterAPIView, CustomTokenObtainPairView, AdminUserViewSet, RoleViewSet
 from .views import PasswordResetRequestView, PasswordResetConfirmView, MeAPIView
 
 router = DefaultRouter()
 router.register('admin-users', AdminUserViewSet, basename='admin-user')
+router.register('roles', RoleViewSet, basename='role')
 
 urlpatterns = [
     path('auth/register/', RegisterAPIView.as_view(), name='auth-register'),
@@ -16,3 +17,4 @@ urlpatterns = [
     path('auth/me/', MeAPIView.as_view(), name='auth-me'),
     path('', include(router.urls)),
 ]
+

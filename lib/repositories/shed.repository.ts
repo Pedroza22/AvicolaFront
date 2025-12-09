@@ -17,6 +17,21 @@ export class ShedRepository {
     const response = await httpClient.get<Shed>(API_ENDPOINTS.sheds.detail(id))
     return response.data
   }
+
+  async create(shed: Omit<Shed, "id">): Promise<Shed> {
+    const response = await httpClient.post<Shed>(API_ENDPOINTS.sheds.create, shed)
+    return response.data
+  }
+
+  async update(id: string, shed: Partial<Shed>): Promise<Shed> {
+    const response = await httpClient.put<Shed>(API_ENDPOINTS.sheds.update(id), shed)
+    return response.data
+  }
+
+  async delete(id: string): Promise<void> {
+    await httpClient.delete(API_ENDPOINTS.sheds.delete(id))
+  }
 }
 
 export const shedRepository = new ShedRepository()
+

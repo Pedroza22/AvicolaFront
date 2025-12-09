@@ -30,6 +30,14 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return super().validate(attrs)
 
 
+class RoleSerializer(serializers.ModelSerializer):
+    """Serializer for Role model to expose roles to frontend."""
+    class Meta:
+        model = Role
+        fields = ('id', 'name')
+        read_only_fields = ('id', 'name')
+
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
