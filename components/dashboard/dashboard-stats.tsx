@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { TrendingUp, TrendingDown, Users, AlertTriangle } from "lucide-react"
+import { TrendingUp, TrendingDown, Users, AlertTriangle, Home, MapPin, Calendar } from "lucide-react"
 import { loteRepository } from "@/lib/repositories/lote.repository"
+import { farmRepository } from "@/lib/repositories/farm.repository"
+import { shedRepository } from "@/lib/repositories/shed.repository"
 import type { Lote } from "@/lib/types"
 
 interface DashboardStatsProps {
@@ -15,10 +17,53 @@ interface DashboardStatsProps {
 
 export function DashboardStats({ selectedFarm, selectedShed, selectedLote, galponeroData }: DashboardStatsProps) {
   const [loteData, setLoteData] = useState<Lote | null>(null)
+  const [generalStats, setGeneralStats] = useState({
+    totalFarms: 0,
+    totalSheds: 0,
+    totalLotes: 0,
+    totalChickens: 0,
+  })
   const [loading, setLoading] = useState(false)
 
+  // Cargar estadísticas generales cuando no hay selección específica
   useEffect(() => {
-    if (!selectedLote) return
+    const loadGeneralStats = async () => {
+      try {
+        setLoading(true)
+        const [farms, sheds, lotes] = await Promise.all([
+          farmRepository.getAll(),
+          shedRepository.getAll(),
+          loteRepository.getActive(),
+        ])
+
+        const totalChickens = lotes.reduce((sum, lote) => {
+          return sum + (lote.current_quantity || lote.pollosActuales || 0)
+        }, 0)
+
+        setGeneralStats({
+          totalFarms: farms.length,
+          totalSheds: sheds.length,
+          totalLotes: lotes.length,
+          totalChickens,
+        })
+      } catch (error) {
+        console.error("Error loading general stats:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (!selectedLote) {
+      loadGeneralStats()
+    }
+  }, [selectedLote])
+
+  // Cargar datos específicos del lote cuando hay selección
+  useEffect(() => {
+    if (!selectedLote) {
+      setLoteData(null)
+      return
+    }
 
     const loadLoteData = async () => {
       try {
@@ -35,7 +80,92 @@ export function DashboardStats({ selectedFarm, selectedShed, selectedLote, galpo
     loadLoteData()
   }, [selectedLote])
 
-  // Usar datos reales si están disponibles, sino fallback a datos de ejemplo
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Card className="animate-pulse bg-gray-100">
+          <CardHeader><div className="h-6 bg-gray-200 rounded w-1/3"></div></CardHeader>
+          <CardContent><div className="h-20 bg-gray-200 rounded"></div></CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Mostrar estadísticas generales cuando no hay lote seleccionado
+  if (!selectedLote) {
+    return (
+      <div className="space-y-4">
+        <Card className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
+          <CardHeader>
+            <CardTitle className="text-purple-800">
+              Estadísticas Generales del Comercio
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              Vista general de todas las operaciones. Selecciona una granja, galpón o lote para ver detalles específicos.
+            </p>
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Granjas</CardTitle>
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{generalStats.totalFarms}</div>
+              <p className="text-xs text-muted-foreground">
+                Granjas activas en el sistema
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Galpones</CardTitle>
+              <Home className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{generalStats.totalSheds}</div>
+              <p className="text-xs text-muted-foreground">
+                Galpones en operación
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Lotes Activos</CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{generalStats.totalLotes}</div>
+              <p className="text-xs text-muted-foreground">
+                Lotes en producción
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Aves</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{generalStats.totalChickens.toLocaleString("es-ES")}</div>
+              <p className="text-xs text-muted-foreground">
+                Pollos en todos los lotes activos
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
+  // Estadísticas específicas del lote seleccionado
   const liveData = {
     pollosActivos: loteData?.current_quantity || loteData?.pollosActuales || galponeroData?.numeroPollos || 8450,
     pesoPromedio: loteData?.pesoPromedio || galponeroData?.pesoPromedio || 2.1,
@@ -55,17 +185,6 @@ export function DashboardStats({ selectedFarm, selectedShed, selectedLote, galpo
   const tasaMortalidadHoy = liveData.pollosActivos > 0 
     ? ((liveData.mortalidadDia / liveData.pollosActivos) * 100).toFixed(2)
     : "0.00"
-
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <Card className="animate-pulse bg-gray-100">
-          <CardHeader><div className="h-6 bg-gray-200 rounded w-1/3"></div></CardHeader>
-          <CardContent><div className="h-20 bg-gray-200 rounded"></div></CardContent>
-        </Card>
-      </div>
-    )
-  }
 
   return (
     <div className="space-y-4">

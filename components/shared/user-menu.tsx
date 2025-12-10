@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { LogOut, User } from "lucide-react"
+import { LogOut, User, Settings } from "lucide-react"
 import { AuthService } from "@/lib/services/auth.service"
 import { useAppState } from "@/lib/hooks/use-app-state"
 
@@ -23,6 +23,10 @@ export function UserMenu() {
     }
   }
 
+  const handleSettings = () => {
+    router.push('/settings')
+  }
+
   if (!user) return null
 
   return (
@@ -33,6 +37,15 @@ export function UserMenu() {
           {user.username || user.email?.split('@')[0] || 'Usuario'}
         </span>
       </div>
+      <Button 
+        variant="outline" 
+        size="sm"
+        onClick={handleSettings}
+        className="gap-2"
+        title="Ajustes de cuenta"
+      >
+        <Settings className="h-4 w-4" />
+      </Button>
       <Button 
         variant="outline" 
         size="sm"

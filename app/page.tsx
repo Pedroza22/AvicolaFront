@@ -2,7 +2,6 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { Settings } from "lucide-react"
 import { DashboardStats } from "@/components/dashboard/dashboard-stats"
 import { GrowthChart } from "@/components/charts/growth-chart"
 import { MortalityChart } from "@/components/charts/mortality-chart"
@@ -50,9 +49,6 @@ export default function Dashboard() {
           <div className="flex items-center space-x-4">
             <RoleSelector selectedRole={selectedRole} onRoleChange={setSelectedRole} />
             <NotificationsModal />
-            <Button variant="outline" size="icon" onClick={() => alert("Ajustes en desarrollo")}>
-              <Settings className="h-4 w-4" />
-            </Button>
             <UserMenu />
           </div>
         </div>

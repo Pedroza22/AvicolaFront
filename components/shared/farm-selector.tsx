@@ -2,7 +2,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { MapPin, Home, Calendar } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { MapPin, Home, Calendar, Plus } from "lucide-react"
+import { useRouter } from "next/navigation"
 import React from "react"
 
 interface FarmSelectorProps {
@@ -22,6 +24,7 @@ export function FarmSelector({
   onShedChange,
   onLoteChange,
 }: FarmSelectorProps) {
+  const router = useRouter()
   const [farms, setFarms] = React.useState<Array<{ id: string; name: string }>>([])
   const [sheds, setSheds] = React.useState<Array<{ id: string; name: string }>>([])
   const [lotes, setLotes] = React.useState<Array<{ id: string; name: string; diasActuales?: number }>>([])
@@ -37,15 +40,12 @@ export function FarmSelector({
       return mod.farmRepository.getAll()
     }).then((data) => {
       if (mounted) {
-        const farmList = data.map((f: any) => ({ id: String(f.id), name: f.name }))
+        // Ensure data is an array
+        const dataArray = Array.isArray(data) ? data : []
+        const farmList = dataArray.map((f: any) => ({ id: String(f.id), name: f.name }))
         console.log('🏠 Farms loaded:', farmList)
         setFarms(farmList)
         setError(null)
-        // Auto-select first farm if none selected
-        if (!selectedFarm && farmList.length > 0) {
-          console.log('🎯 Auto-selecting farm:', farmList[0].id)
-          onFarmChange(farmList[0].id)
-        }
       }
     }).catch(async (error) => {
       console.error('❌ Error loading farms:', error)
@@ -61,12 +61,10 @@ export function FarmSelector({
             const mod = await import('@/lib/repositories/farm.repository')
             const data = await mod.farmRepository.getAll()
             if (mounted) {
-              const farmList = data.map((f: any) => ({ id: String(f.id), name: f.name }))
+              const dataArray = Array.isArray(data) ? data : []
+              const farmList = dataArray.map((f: any) => ({ id: String(f.id), name: f.name }))
               console.log('🏠 Farms loaded after refresh:', farmList)
               setFarms(farmList)
-              if (!selectedFarm && farmList.length > 0) {
-                onFarmChange(farmList[0].id)
-              }
             }
           }
         }
@@ -90,11 +88,6 @@ export function FarmSelector({
           const shedList = data.map((s: any) => ({ id: String(s.id), name: s.name }))
           console.log('🏚️ Sheds loaded for farm', selectedFarm, ':', shedList)
           setSheds(shedList)
-          // Auto-select first shed if none selected
-          if (!selectedShed && shedList.length > 0) {
-            console.log('🎯 Auto-selecting shed:', shedList[0].id)
-            onShedChange(shedList[0].id)
-          }
         }
       })
       .catch(async (error) => {
@@ -111,9 +104,6 @@ export function FarmSelector({
                 const shedList = data.map((s: any) => ({ id: String(s.id), name: s.name }))
                 console.log('🏚️ Sheds loaded after refresh for farm', selectedFarm, ':', shedList)
                 setSheds(shedList)
-                if (!selectedShed && shedList.length > 0) {
-                  onShedChange(shedList[0].id)
-                }
               }
             }
           }
@@ -138,11 +128,6 @@ export function FarmSelector({
           const loteList = data.map((l: any) => ({ id: String(l.id), name: l.name || `Lote ${l.id}`, diasActuales: l.current_age_days ?? l.diasActuales }))
           console.log('🐔 Lotes loaded for shed', selectedShed, ':', loteList)
           setLotes(loteList)
-          // Auto-select first lote if none selected
-          if (!selectedLote && loteList.length > 0) {
-            console.log('🎯 Auto-selecting lote:', loteList[0].id)
-            onLoteChange(loteList[0].id)
-          }
         }
       })
       .catch(async (error) => {
@@ -159,9 +144,6 @@ export function FarmSelector({
                 const loteList = data.map((l: any) => ({ id: String(l.id), name: l.name || `Lote ${l.id}`, diasActuales: l.current_age_days ?? l.diasActuales }))
                 console.log('🐔 Lotes loaded after refresh for shed', selectedShed, ':', loteList)
                 setLotes(loteList)
-                if (!selectedLote && loteList.length > 0) {
-                  onLoteChange(loteList[0].id)
-                }
               }
             }
           }
@@ -194,9 +176,19 @@ export function FarmSelector({
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MapPin className="h-4 w-4" />
-            Seleccionar Granja
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              Seleccionar Granja
+            </span>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => router.push('/admin/farms')}
+              title="Agregar granja"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -205,6 +197,7 @@ export function FarmSelector({
               <SelectValue placeholder={loadingFarms ? "Cargando..." : "Seleccionar granja"} />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="">Todas las granjas</SelectItem>
               {farms.map((farm) => (
                 <SelectItem key={farm.id} value={farm.id}>
                   {farm.name}
@@ -217,17 +210,29 @@ export function FarmSelector({
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Home className="h-4 w-4" />
-            Seleccionar Galpón
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Home className="h-4 w-4" />
+              Seleccionar Galpón
+            </span>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => router.push('/admin/sheds')}
+              disabled={!selectedFarm}
+              title="Agregar galpón"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Select value={selectedShed ?? ""} onValueChange={onShedChange}>
+          <Select value={selectedShed ?? ""} onValueChange={onShedChange} disabled={!selectedFarm}>
             <SelectTrigger>
-              <SelectValue placeholder={loadingSheds ? "Cargando..." : "Seleccionar galpón"} />
+              <SelectValue placeholder={loadingSheds ? "Cargando..." : selectedFarm ? "Seleccionar galpón" : "Primero selecciona una granja"} />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="">Todos los galpones</SelectItem>
               {sheds.map((shed) => (
                 <SelectItem key={shed.id} value={shed.id}>
                   {shed.name}
@@ -240,17 +245,29 @@ export function FarmSelector({
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            Seleccionar Lote
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Seleccionar Lote
+            </span>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => router.push('/admin/lotes')}
+              disabled={!selectedShed}
+              title="Agregar lote"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Select value={selectedLote ?? ""} onValueChange={onLoteChange}>
+          <Select value={selectedLote ?? ""} onValueChange={onLoteChange} disabled={!selectedShed}>
             <SelectTrigger>
-              <SelectValue placeholder={loadingLotes ? "Cargando..." : "Seleccionar lote"} />
+              <SelectValue placeholder={loadingLotes ? "Cargando..." : selectedShed ? "Seleccionar lote" : "Primero selecciona un galpón"} />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="">Todos los lotes</SelectItem>
               {lotes.map((lote) => (
                 <SelectItem key={lote.id} value={lote.id}>
                   {lote.name}

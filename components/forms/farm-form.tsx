@@ -1,64 +1,105 @@
 "use client"
 
-import React, { useState } from "react"
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button"
-import { farmRepository } from "@/lib/repositories/farm.repository"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import type { Farm } from "@/lib/types"
 
-const nameRx = /^[\p{L}0-9 .,'-]{3,100}$/u
-
-function sanitize(input: string) {
-  if (!input) return input
-  return input.replace(/[\x00-\x1F\x7F]/g, "").replace(/\s+/g, " ").trim()
+interface FarmFormProps {
+  farm?: Farm
+  onSubmit: (data: Omit<Farm, "id" | "sheds">) => Promise<void>
+  onCancel: () => void
 }
 
-export default function FarmForm({ onCreated }: { onCreated?: (f: any) => void }) {
-  const [name, setName] = useState("")
-  const [location, setLocation] = useState("")
-  const [error, setError] = useState<string | null>(null)
+export function FarmForm({ farm, onSubmit, onCancel }: FarmFormProps) {
   const [loading, setLoading] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [formData, setFormData] = useState({
+    name: farm?.name || "",
+    status: farm?.status || "activa" as const,
+  })
 
-  const validate = () => {
-    if (!nameRx.test(sanitize(name))) return "Nombre inválido (3-100 caracteres, letras y números)"
-    if (location.trim().length < 5) return "Ubicación muy corta"
-    return null
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {}
+
+    if (!formData.name.trim()) {
+      newErrors.name = "El nombre es requerido"
+    } else if (formData.name.trim().length < 3) {
+      newErrors.name = "El nombre debe tener al menos 3 caracteres"
+    } else if (formData.name.trim().length > 100) {
+      newErrors.name = "El nombre no puede exceder 100 caracteres"
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
 
-  const submit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const v = validate()
-    if (v) {
-      setError(v)
-      return
-    }
+    
+    if (!validateForm()) return
+
     setLoading(true)
     try {
-      const payload = { name: sanitize(name), location: sanitize(location) }
-      const created = await farmRepository.create(payload)
-      setName("")
-      setLocation("")
-      onCreated?.(created)
-    } catch (err: any) {
-      setError(err?.response?.data?.detail || err?.message || "Error al crear granja")
+      await onSubmit({
+        name: formData.name.trim(),
+        status: formData.status,
+      })
+    } catch (error: any) {
+      console.error("Error submitting farm:", error)
+      if (error?.response?.data) {
+        const backendErrors: Record<string, string> = {}
+        Object.entries(error.response.data).forEach(([key, value]) => {
+          backendErrors[key] = Array.isArray(value) ? value[0] : String(value)
+        })
+        setErrors(backendErrors)
+      }
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4 max-w-xl">
-      {error && <div className="text-sm text-red-600">{error}</div>}
-      <div>
-        <Label htmlFor="name">Nombre de la granja</Label>
-        <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="name">Nombre de la Granja *</Label>
+        <Input
+          id="name"
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          placeholder="Ej: Granja El Rocío"
+          disabled={loading}
+        />
+        {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
       </div>
-      <div>
-        <Label htmlFor="location">Ubicación</Label>
-        <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} />
+
+      <div className="space-y-2">
+        <Label htmlFor="status">Estado</Label>
+        <Select
+          value={formData.status}
+          onValueChange={(value: any) => setFormData({ ...formData, status: value })}
+          disabled={loading}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="activa">Activa</SelectItem>
+            <SelectItem value="mantenimiento">Mantenimiento</SelectItem>
+            <SelectItem value="inactiva">Inactiva</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
-      <div className="flex gap-2">
-        <Button type="submit" disabled={loading}>{loading ? 'Creando...' : 'Crear granja'}</Button>
+
+      <div className="flex justify-end gap-2 pt-4">
+        <Button type="button" variant="outline" onClick={onCancel} disabled={loading}>
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={loading}>
+          {loading ? "Guardando..." : farm ? "Actualizar" : "Crear"}
+        </Button>
       </div>
     </form>
   )
